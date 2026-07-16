@@ -1,65 +1,176 @@
-import Image from "next/image";
+import { supabase } from "@/lib/supabase";
+import { polylineToSvgPath } from "@/lib/polyline";
 
-export default function Home() {
+function formatDistance(meters: number): string {
+  return (meters / 1000).toFixed(2) + " km";
+}
+
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  return `${m}m ${s}s`;
+}
+
+function formatPace(avgSpeed: number, sportType: string): string {
+  if (!avgSpeed || avgSpeed === 0) return "-";
+  if (sportType.includes("Ride")) {
+    return (avgSpeed * 3.6).toFixed(1) + " km/h";
+  }
+  // Running pace: min/km
+  const paceSeconds = 1000 / avgSpeed;
+  const min = Math.floor(paceSeconds / 60);
+  const sec = Math.floor(paceSeconds % 60);
+  return `${min}:${sec.toString().padStart(2, "0")} /km`;
+}
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const { data: athletes } = await supabase
+    .from("athletes")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  let activitiesByAthlete: Record<string, Array<Record<string, unknown>>> = {};
+
+  if (athletes && athletes.length > 0) {
+    for (const athlete of athletes) {
+      const { data } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("athlete_id", athlete.id)
+        .order("start_date", { ascending: false })
+        .limit(10);
+      activitiesByAthlete[athlete.id] = data ?? [];
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <h1>Athlast</h1>
+      <p>
+        <a href="/api/strava/auth">Connect with Strava</a>
+      </p>
+
+      {!athletes || athletes.length === 0 ? (
+        <p>No athletes connected yet. Click above to connect Strava.</p>
+      ) : (
+        athletes.map((athlete) => (
+          <div key={athlete.id} style={{ marginTop: "2rem" }}>
+            <h2>
+              {athlete.first_name} {athlete.last_name}
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: "#666" }}>
+              Strava ID: {athlete.strava_id}
+            </p>
+            <form
+              action={`/api/strava/sync`}
+              method="POST"
+              style={{ marginBottom: "1rem" }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              <input type="hidden" name="athlete_id" value={athlete.id} />
+              <button
+                type="submit"
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "#fc4c02",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                }}
+              >
+                Sync Activities
+              </button>
+            </form>
+
+            {activitiesByAthlete[athlete.id]?.length > 0 ? (
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  width: "100%",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <thead>
+                  <tr>
+                    {["Route", "Name", "Type", "Distance", "Time", "Pace", "Date"].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: "left",
+                            borderBottom: "1px solid #ccc",
+                            padding: "0.5rem",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activitiesByAthlete[athlete.id].map((act) => (
+                    <tr key={act.id as string}>
+                      <td style={{ padding: "0.5rem" }}>
+                        {act.map_summary_polyline ? (
+                          <svg
+                            width="60"
+                            height="40"
+                            viewBox="0 0 60 40"
+                            style={{ display: "block" }}
+                          >
+                            <path
+                              d={polylineToSvgPath(
+                                act.map_summary_polyline as string,
+                                60,
+                                40
+                              )}
+                              fill="none"
+                              stroke="#fc4c02"
+                              strokeWidth="1.5"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        ) : (
+                          <span style={{ color: "#ccc" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {act.name as string}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {act.sport_type as string}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {formatDistance(act.distance as number)}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {formatTime(act.moving_time as number)}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {formatPace(
+                          act.average_speed as number,
+                          act.sport_type as string
+                        )}
+                      </td>
+                      <td style={{ padding: "0.5rem" }}>
+                        {new Date(act.start_date as string).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No activities yet. Click Sync to pull from Strava.</p>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }
