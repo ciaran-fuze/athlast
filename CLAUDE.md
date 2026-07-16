@@ -98,6 +98,9 @@ Premium, minimal, human — feels like a brand not a software product.
 - **Homepage** — `app/page.tsx` lists athletes + 10 recent activities with mini route maps
 - **Polyline renderer** — `lib/polyline.ts` decodes Strava polylines to SVG paths
 - **Brand system** — DM font family, warm cream palette, logo in hero
+- **Deployed** — Vercel at https://athlast-nine.vercel.app, GitHub at ciaran-fuze/athlast
+- **Live demo race** — `/race/dublin-half-2026-live` with mock mid-race splits (pulsing tracker at 10K)
+- **Finished demo race** — `/race/dublin-half-2026` with real Race Result data from May 2026
 
 ## Next Up
 
