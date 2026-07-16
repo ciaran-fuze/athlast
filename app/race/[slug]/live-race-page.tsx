@@ -119,6 +119,12 @@ export function LiveRacePage({
     athleteSplits.length > 0
       ? Math.round((completedSplits.length / athleteSplits.length) * 100)
       : 0;
+  // Track fill should align with dots: last completed dot index / (total dots - 1)
+  const lastCompletedIndex = completedSplits.length - 1;
+  const trackPct =
+    athleteSplits.length > 1
+      ? (lastCompletedIndex / (athleteSplits.length - 1)) * 100
+      : 0;
 
   return (
     <div style={{ minHeight: "100vh", background: brand.bg }}>
@@ -421,7 +427,7 @@ export function LiveRacePage({
                   background: brand.dark,
                   borderRadius: 2,
                   transform: "translateY(-50%)",
-                  width: `calc(${progressPct}% - 20px * ${progressPct} / 100 + 10px)`,
+                  width: `${trackPct}%`,
                   transition: "width 0.8s ease-out",
                 }}
               />
@@ -460,10 +466,12 @@ export function LiveRacePage({
                             height: 18,
                             borderRadius: "50%",
                             background: brand.dark,
+                            opacity: 0.3,
                             animation: "pulse 2s ease-in-out infinite",
-                            top: "50%",
-                            transform: "translate(-50%, -50%)",
+                            top: 0,
                             left: "50%",
+                            transform: "translateX(-50%)",
+                            pointerEvents: "none",
                           }}
                         />
                       )}
