@@ -7,14 +7,14 @@ Athlast is an endurance sport brand and app that captures race day for endurance
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router)
-- **Database:** Supabase (Postgres)
-- **Hosting:** Vercel
-- **APIs:** Strava API (activity data), Anthropic API (memoir generation)
+- **Database:** Supabase (Postgres + Storage)
+- **Hosting:** Vercel — https://athlast-nine.vercel.app
+- **APIs:** Strava API (activity data), Race Result API (live race splits), Anthropic API (memoir generation)
 - **Language:** TypeScript
 
 ## Current Sprint Goal
 
-MVP foundation: Strava OAuth, activity sync, and basic data display.
+Race page MVP for Dublin Half Marathon (September 2026): live splits via Race Result, supporter messages + photos, post-race Strava activity matching.
 
 ## Data Model
 
@@ -22,7 +22,7 @@ MVP foundation: Strava OAuth, activity sync, and basic data display.
 - `id` (uuid, PK)
 - `strava_id` (bigint, unique) — Strava athlete ID
 - `first_name`, `last_name` (text)
-- `profile_picture` (text) — URL
+- `profile_picture` (text) — URL from Strava, used as Athlast profile
 - `access_token`, `refresh_token` (text) — Strava OAuth tokens
 - `token_expires_at` (bigint) — Unix timestamp
 - `created_at`, `updated_at` (timestamptz)
@@ -31,16 +31,29 @@ MVP foundation: Strava OAuth, activity sync, and basic data display.
 - `id` (uuid, PK)
 - `strava_id` (bigint, unique) — Strava activity ID
 - `athlete_id` (uuid, FK -> athletes)
-- `name` (text)
-- `sport_type` (text) — Run, Ride, etc.
-- `distance` (real) — meters
-- `moving_time` (integer) — seconds
-- `elapsed_time` (integer) — seconds
+- `name`, `sport_type` (text)
+- `distance` (real, meters), `moving_time`, `elapsed_time` (integer, seconds)
 - `start_date` (timestamptz)
-- `average_speed` (real) — m/s
-- `max_speed` (real) — m/s
-- `total_elevation_gain` (real) — meters
+- `average_speed`, `max_speed` (real, m/s), `total_elevation_gain` (real, meters)
 - `map_summary_polyline` (text)
+- `created_at` (timestamptz)
+
+### races
+- `id` (uuid, PK), `slug` (text, unique)
+- `name`, `location` (text), `race_date` (date), `distance_km` (real)
+- `raceresult_event_id` (integer), `raceresult_server` (text), `raceresult_key` (text)
+- `status` (upcoming | live | finished)
+- `created_at` (timestamptz)
+
+### race_athletes
+- `id` (uuid, PK)
+- `race_id` (FK -> races), `athlete_id` (FK -> athletes)
+- `bib_number` (integer), `raceresult_pid` (integer)
+
+### supporter_messages
+- `id` (uuid, PK)
+- `race_id` (FK -> races), `athlete_id` (FK -> athletes)
+- `sender_name` (text), `message` (text), `photo_url` (text)
 - `created_at` (timestamptz)
 
 ## Branding
@@ -66,18 +79,36 @@ Premium, minimal, human — feels like a brand not a software product.
 - Using Supabase service role key server-side for direct DB access (no RLS for now).
 - Strava tokens stored in the athletes table for simplicity.
 - Activities table keyed by `strava_id` for upsert idempotency.
+- Race Result API for live tracking — no need to build custom GPS tracking. One integration per timing provider covers many races.
+- Race Result endpoints: config at `/{eventId}/results/config`, participant splits at `/{eventId}/details0/view?pid={pid}&key={key}`.
+- Strava profile picture bootstraps the Athlast athlete profile.
+- Activity sync is manual, not automatic — future: match Strava activity to race by date + distance.
 
 ## What's Built
 
 - **Supabase client** — `lib/supabase.ts` (service role, server-side only)
-- **Schema** — `supabase/schema.sql` (athletes + activities tables, ready to run in dashboard)
-- **Strava OAuth** — `GET /api/strava/auth` redirects to Strava, `GET /api/strava/callback` exchanges code and upserts athlete
-- **Activity sync** — `POST /api/strava/sync` pulls all Run/Ride activities (paginated), refreshes tokens if expired, upserts to activities table
-- **Homepage** — `app/page.tsx` lists all athletes and their 10 most recent activities (name, type, distance, time, pace, date) with a Sync button per athlete
+- **Schema** — `supabase/schema.sql` + `supabase/002_races.sql`
+- **Strava OAuth** — `GET /api/strava/auth` → `GET /api/strava/callback`
+- **Activity sync** — `POST /api/strava/sync` (paginated, token refresh)
+- **Race Result integration** — `lib/raceresult.ts` (config + participant splits)
+- **Race page** — `app/race/[slug]` with live progress tracker, splits table, supporter messages, photo upload
+- **Photo upload** — `POST /api/race/upload` → Supabase Storage (`supporter-photos` bucket)
+- **Supporter messages** — `GET/POST /api/race/cheer`
+- **Live splits polling** — `GET /api/race/splits` (polls Race Result every 30s during live races)
+- **Homepage** — `app/page.tsx` lists athletes + 10 recent activities with mini route maps
+- **Polyline renderer** — `lib/polyline.ts` decodes Strava polylines to SVG paths
+- **Brand system** — DM font family, warm cream palette, logo in hero
+
+## Next Up
+
+- Smart activity matching: after a race, match Strava activity to race page by date + distance + sport type
+- Dublin Half Marathon race page for September (real event, real data)
+- Memoir generation with Anthropic API
+- Mobile app for Lanzarote Ironman (May 2027)
 
 ## Open Questions
 
-- How will supporters be linked to athletes/races?
-- What triggers memoir generation — manual or automatic after race detection?
-- Should we add a `races` table to group activities and supporter content?
 - Auth strategy for athletes beyond Strava OAuth (e.g. Supabase Auth)?
+- How do supporters discover the race page? (shareable link vs QR code vs search)
+- Memoir format — web page, PDF poster, or both?
+- Should Race Result config/key be cached in DB or fetched fresh each time?
