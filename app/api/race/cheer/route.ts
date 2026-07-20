@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { race_id, athlete_id, sender_name, message, photo_url } = body;
+  const { race_id, athlete_id, sender_name, message, photo_url, athlete_km_at_send } = body;
 
   if (!race_id || !athlete_id || !sender_name) {
     return NextResponse.json(
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       sender_name,
       message: message || null,
       photo_url: photo_url || null,
+      athlete_km_at_send: typeof athlete_km_at_send === "number" ? athlete_km_at_send : null,
     })
     .select()
     .single();
