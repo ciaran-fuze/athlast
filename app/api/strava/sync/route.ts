@@ -69,40 +69,49 @@ export async function POST(request: NextRequest) {
 
   const accessToken = await refreshTokenIfNeeded(athlete);
 
-  // Fetch all pages of running and cycling activities
+  // Find the most recent activity we already have, so we only fetch new ones
+  const { data: latestActivity } = await supabase
+    .from("activities")
+    .select("start_date")
+    .eq("athlete_id", athlete_id)
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .single();
+
+  const afterEpoch = latestActivity
+    ? Math.floor(new Date(latestActivity.start_date).getTime() / 1000)
+    : undefined;
+
   let page = 1;
   const perPage = 100;
   let allActivities: Record<string, unknown>[] = [];
 
   while (true) {
-    const res = await fetch(
-      `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    let url = `https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`;
+    if (afterEpoch) url += `&after=${afterEpoch}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     if (!res.ok) {
+      if (res.status === 429) {
+        return NextResponse.json(
+          { error: "Strava rate limit exceeded. Try again later." },
+          { status: 429 }
+        );
+      }
+      const err = await res.text();
       return NextResponse.json(
-        { error: "Failed to fetch activities from Strava" },
-        { status: 500 }
+        { error: "Failed to fetch activities from Strava", details: err },
+        { status: res.status }
       );
     }
 
     const activities = await res.json();
     if (activities.length === 0) break;
 
-    // Filter to running and cycling only
-    const filtered = activities.filter(
-      (a: { sport_type: string }) =>
-        a.sport_type === "Run" ||
-        a.sport_type === "Ride" ||
-        a.sport_type === "TrailRun" ||
-        a.sport_type === "GravelRide" ||
-        a.sport_type === "MountainBikeRide" ||
-        a.sport_type === "VirtualRun" ||
-        a.sport_type === "VirtualRide"
-    );
-
-    allActivities = allActivities.concat(filtered);
+    allActivities = allActivities.concat(activities);
     if (activities.length < perPage) break;
     page++;
   }

@@ -72,6 +72,7 @@ export function LiveRacePage({
     raceAthletes[0]?.athlete_id ?? ""
   );
   const [splitsOpen, setSplitsOpen] = useState(false);
+  const [showAllMessages, setShowAllMessages] = useState(false);
 
   const pollSplits = useCallback(async () => {
     for (const ra of raceAthletes) {
@@ -204,17 +205,16 @@ export function LiveRacePage({
         }
         @keyframes splashBackdrop {
           0% { backdrop-filter: blur(0px); background: rgba(26,26,24,0); }
-          30% { backdrop-filter: blur(12px); background: rgba(26,26,24,0.4); }
-          85% { backdrop-filter: blur(12px); background: rgba(26,26,24,0.4); }
+          15% { backdrop-filter: blur(12px); background: rgba(26,26,24,0.4); }
+          90% { backdrop-filter: blur(12px); background: rgba(26,26,24,0.4); }
           100% { backdrop-filter: blur(0px); background: rgba(26,26,24,0); }
         }
         @keyframes splashCard {
           0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-          15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-          25% { transform: translate(-50%, -50%) scale(0.95); }
-          35% { transform: translate(-50%, -50%) scale(1.02); }
-          40% { transform: translate(-50%, -50%) scale(1); }
-          80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          8% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+          14% { transform: translate(-50%, -50%) scale(0.95); }
+          20% { transform: translate(-50%, -50%) scale(1); }
+          88% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
           100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6) translateY(40px); }
         }
         @keyframes splashRing1 {
@@ -571,6 +571,7 @@ export function LiveRacePage({
           raceDistanceKm={race.distance_km}
           isLive={race.status === "live"}
           athleteFirstName={athlete?.athletes.first_name ?? "the athlete"}
+          onSeeAll={() => setShowAllMessages(true)}
         />
 
         {/* Message input — part of the support section */}
@@ -581,6 +582,164 @@ export function LiveRacePage({
           athleteKm={estimatedKm}
           onSent={pollMessages}
         />
+
+        {/* All messages sheet */}
+        {showAllMessages && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(26,26,24,0.5)",
+              zIndex: 100,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "center",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowAllMessages(false);
+            }}
+          >
+            <div
+              style={{
+                background: brand.bg,
+                borderRadius: "16px 16px 0 0",
+                width: "100%",
+                maxWidth: 640,
+                maxHeight: "80vh",
+                overflowY: "auto",
+                animation: "sheetUp 0.3s ease-out",
+              }}
+            >
+              <div
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  background: brand.bg,
+                  padding: "1.25rem 1.25rem 0.75rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderBottom: `1px solid ${brand.border}`,
+                  zIndex: 1,
+                }}
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    fontFamily: brand.font.display,
+                    fontSize: "1.1rem",
+                    fontWeight: 400,
+                  }}
+                >
+                  All messages ({messages.length})
+                </h3>
+                <button
+                  onClick={() => setShowAllMessages(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "1.5rem",
+                    color: brand.muted,
+                    lineHeight: 1,
+                    padding: "0.25rem",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ padding: "0.75rem 1.25rem 2rem" }}>
+                {messages.map((msg) => {
+                  const km = msg.athlete_km_at_send;
+                  const stamp = km !== null && km !== undefined ? `${km.toFixed(1)}KM` : null;
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        padding: "0.85rem 0",
+                        borderBottom: `1px solid ${brand.border}`,
+                      }}
+                    >
+                      {msg.photo_url && (
+                        <img
+                          src={msg.photo_url}
+                          alt=""
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: 300,
+                            borderRadius: "10px",
+                            display: "block",
+                            marginBottom: "0.5rem",
+                            objectFit: "contain",
+                          }}
+                        />
+                      )}
+                      {msg.message && (
+                        <p
+                          style={{
+                            margin: 0,
+                            fontFamily: brand.font.body,
+                            fontSize: "0.95rem",
+                            lineHeight: 1.5,
+                            color: brand.dark,
+                          }}
+                        >
+                          {msg.message}
+                        </p>
+                      )}
+                      <div
+                        style={{
+                          marginTop: "0.4rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <span
+                            style={{
+                              fontFamily: brand.font.body,
+                              fontSize: "0.8rem",
+                              fontWeight: 600,
+                              color: brand.dark,
+                            }}
+                          >
+                            {msg.sender_name}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: brand.font.mono,
+                              fontSize: "0.65rem",
+                              color: brand.muted,
+                              marginLeft: "0.4rem",
+                            }}
+                          >
+                            {timeAgo(msg.created_at)}
+                          </span>
+                        </div>
+                        {stamp && (
+                          <span
+                            style={{
+                              fontFamily: brand.font.mono,
+                              fontSize: "0.65rem",
+                              fontWeight: 600,
+                              color: brand.dark,
+                              background: brand.grid,
+                              padding: "0.1rem 0.4rem",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            {stamp}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Race data — collapsible */}
         {athleteSplits.length > 0 && (
@@ -825,6 +984,7 @@ function MessageField({
   raceDistanceKm,
   isLive,
   athleteFirstName,
+  onSeeAll,
 }: {
   messages: Message[];
   raceAthletes: RaceAthlete[];
@@ -833,6 +993,7 @@ function MessageField({
   raceDistanceKm: number;
   isLive: boolean;
   athleteFirstName: string;
+  onSeeAll: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -894,7 +1055,7 @@ function MessageField({
       splashActiveRef.current = false;
       // Process next in queue
       processQueue();
-    }, 3000);
+    }, 5000);
   }
 
   useEffect(() => {
@@ -918,7 +1079,7 @@ function MessageField({
       processQueue();
 
       // Clear new IDs after all splashes finish (3s per message + buffer)
-      setTimeout(() => setNewIds(new Set()), arriving.length * 3000 + 500);
+      setTimeout(() => setNewIds(new Set()), arriving.length * 5000 + 500);
     }
 
     requestAnimationFrame(() => {
@@ -1064,7 +1225,7 @@ function MessageField({
         </div>
       )}
 
-      {/* Scrollable field with timeline */}
+      {/* Dark scrollable message field */}
       <style>{`
         .message-field::-webkit-scrollbar { display: none; }
       `}</style>
@@ -1082,7 +1243,9 @@ function MessageField({
             scrollbarWidth: "none",
             msOverflowStyle: "none",
             position: "relative",
-            height: 380,
+            height: 400,
+            borderRadius: "16px",
+            background: "linear-gradient(180deg, #dce8f0 0%, #e8f0f4 60%, #eef2eb 100%)",
           }}
         >
           <div
@@ -1092,37 +1255,37 @@ function MessageField({
               height: "100%",
             }}
           >
-            {/* Terrain — single wavy line with subtle fill below */}
+            {/* Terrain — wavy hills, light on dark */}
             <svg
               style={{
                 position: "absolute",
                 bottom: 0,
                 left: 0,
                 width: fieldWidth,
-                height: 40,
+                height: 50,
               }}
-              viewBox={`0 0 ${fieldWidth} 40`}
+              viewBox={`0 0 ${fieldWidth} 50`}
               preserveAspectRatio="none"
               fill="none"
             >
               <path
-                d={`M 0 28 Q ${fieldWidth * 0.08} 18, ${fieldWidth * 0.16} 24 Q ${fieldWidth * 0.25} 30, ${fieldWidth * 0.35} 20 Q ${fieldWidth * 0.45} 12, ${fieldWidth * 0.55} 22 Q ${fieldWidth * 0.65} 30, ${fieldWidth * 0.75} 18 Q ${fieldWidth * 0.85} 10, ${fieldWidth * 0.95} 22 L ${fieldWidth} 22 L ${fieldWidth} 40 L 0 40 Z`}
+                d={`M 0 35 Q ${fieldWidth * 0.08} 22, ${fieldWidth * 0.16} 30 Q ${fieldWidth * 0.25} 38, ${fieldWidth * 0.35} 25 Q ${fieldWidth * 0.45} 15, ${fieldWidth * 0.55} 28 Q ${fieldWidth * 0.65} 38, ${fieldWidth * 0.75} 22 Q ${fieldWidth * 0.85} 12, ${fieldWidth * 0.95} 28 L ${fieldWidth} 28 L ${fieldWidth} 50 L 0 50 Z`}
                 fill={brand.grid}
-                opacity="0.4"
+                opacity="0.5"
               />
               <path
-                d={`M 0 28 Q ${fieldWidth * 0.08} 18, ${fieldWidth * 0.16} 24 Q ${fieldWidth * 0.25} 30, ${fieldWidth * 0.35} 20 Q ${fieldWidth * 0.45} 12, ${fieldWidth * 0.55} 22 Q ${fieldWidth * 0.65} 30, ${fieldWidth * 0.75} 18 Q ${fieldWidth * 0.85} 10, ${fieldWidth * 0.95} 22 L ${fieldWidth} 22`}
+                d={`M 0 35 Q ${fieldWidth * 0.08} 22, ${fieldWidth * 0.16} 30 Q ${fieldWidth * 0.25} 38, ${fieldWidth * 0.35} 25 Q ${fieldWidth * 0.45} 15, ${fieldWidth * 0.55} 28 Q ${fieldWidth * 0.65} 38, ${fieldWidth * 0.75} 22 Q ${fieldWidth * 0.85} 12, ${fieldWidth * 0.95} 28 L ${fieldWidth} 28`}
                 stroke={brand.border}
                 strokeWidth="1"
                 fill="none"
               />
             </svg>
 
-            {/* Clouds scattered across the sky */}
-            {Array.from({ length: Math.max(10, Math.ceil(fieldWidth / 250)) }).map((_, ci) => {
+            {/* Clouds — light wisps on dark */}
+            {Array.from({ length: Math.max(8, Math.ceil(fieldWidth / 300)) }).map((_, ci) => {
               const cx = ((ci * 251 + 80) % fieldWidth);
-              const cy = 5 + ((ci * 37 + 11) % 35);
-              const s = 0.8 + ((ci * 7) % 5) * 0.2;
+              const cy = 10 + ((ci * 37 + 11) % 30);
+              const s = 0.9 + ((ci * 7) % 4) * 0.2;
               return (
                 <svg
                   key={`cloud-${ci}`}
@@ -1130,9 +1293,9 @@ function MessageField({
                     position: "absolute",
                     left: cx,
                     top: cy,
-                    width: 56 * s,
-                    height: 24 * s,
-                    opacity: 0.45,
+                    width: 52 * s,
+                    height: 22 * s,
+                    opacity: 0.5,
                   }}
                   viewBox="0 0 48 20"
                   fill={brand.grid}
@@ -1144,12 +1307,11 @@ function MessageField({
               );
             })}
 
-
-            {/* Birds scattered in the sky */}
-            {Array.from({ length: Math.max(8, Math.ceil(fieldWidth / 250)) }).map((_, bi) => {
+            {/* Birds — light on dark */}
+            {Array.from({ length: Math.max(6, Math.ceil(fieldWidth / 350)) }).map((_, bi) => {
               const bx = ((bi * 307 + 120) % fieldWidth);
-              const by = 3 + ((bi * 41 + 7) % 45);
-              const s = 1 + ((bi * 3) % 3) * 0.3;
+              const by = 8 + ((bi * 41 + 7) % 40);
+              const s = 1 + ((bi * 3) % 3) * 0.25;
               return (
                 <svg
                   key={`bird-${bi}`}
@@ -1157,8 +1319,8 @@ function MessageField({
                     position: "absolute",
                     left: bx,
                     top: by,
-                    width: 20 * s,
-                    height: 12 * s,
+                    width: 18 * s,
+                    height: 10 * s,
                     opacity: 0.5,
                   }}
                   viewBox="0 0 14 8"
@@ -1172,13 +1334,13 @@ function MessageField({
               );
             })}
 
-            {/* Runner silhouette at far right */}
+            {/* Runner silhouette — light on dark */}
             <img
               src="/runner-silhouette.svg"
               alt=""
               style={{
                 position: "absolute",
-                bottom: 14,
+                bottom: 18,
                 right: 24,
                 height: 56,
                 opacity: 0.35,
@@ -1187,13 +1349,13 @@ function MessageField({
               }}
             />
 
-            {/* Start line */}
+            {/* Start line — light on dark */}
             <div
               style={{
                 position: "absolute",
                 left: PADDING - 10,
                 top: 20,
-                bottom: 40,
+                bottom: 50,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -1204,7 +1366,7 @@ function MessageField({
               <span
                 style={{
                   fontFamily: brand.font.mono,
-                  fontSize: "0.5rem",
+                  fontSize: "0.55rem",
                   fontWeight: 600,
                   color: brand.muted,
                   letterSpacing: "0.08em",
@@ -1221,9 +1383,10 @@ function MessageField({
               />
             </div>
 
-            {/* Floating message bubbles */}
+            {/* Message bubbles — glow on dark */}
             {chronological.map((msg, i) => {
-              const bubbleY = bubbleYPos[i];
+              // Photo bubbles are tall — force them near the top
+              const bubbleY = msg.photo_url ? 10 + ((i * 13 + 5) % 30) : bubbleYPos[i];
               const rotate = getBubbleRotate(i);
               const floatDur = 3.5 + (i % 3);
               const floatDel = (i * 0.7) % 2.5;
@@ -1240,16 +1403,16 @@ function MessageField({
                     position: "absolute",
                     left: bubbleX[i],
                     top: bubbleY,
-                    width: isPhoto ? 150 : 180,
+                    width: isPhoto ? 160 : 200,
                     transform: `rotate(${rotate}deg)`,
                     transformOrigin: "center center",
                     background: "#fff",
-                    border: `1px solid ${brand.border}`,
                     borderRadius: "16px",
-                    padding: isPhoto ? "0.4rem" : "0.75rem 0.85rem",
+                    padding: isPhoto ? "0.5rem" : "1rem 1.1rem",
                     boxShadow: isNew
-                      ? "0 8px 32px rgba(26,26,24,0.15)"
-                      : "0 2px 12px rgba(26,26,24,0.05)",
+                      ? `0 8px 24px rgba(26,26,24,0.15)`
+                      : "0 2px 12px rgba(26,26,24,0.08)",
+                    border: `1px solid ${brand.border}`,
                     cursor: "pointer",
                     animation: isNew
                       ? "explodeIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards"
@@ -1277,9 +1440,9 @@ function MessageField({
                         width: "100%",
                         borderRadius: "12px",
                         display: "block",
-                        maxHeight: 100,
-                        objectFit: "cover",
-                        marginBottom: msg.message ? "0.4rem" : "0.3rem",
+                        maxHeight: 200,
+                        objectFit: "contain",
+                        marginBottom: msg.message ? "0.5rem" : "0.3rem",
                       }}
                     />
                   )}
@@ -1288,8 +1451,8 @@ function MessageField({
                       style={{
                         margin: 0,
                         fontFamily: brand.font.body,
-                        fontSize: "0.85rem",
-                        lineHeight: 1.4,
+                        fontSize: "0.95rem",
+                        lineHeight: 1.5,
                         color: brand.dark,
                         overflow: "hidden",
                         display: "-webkit-box",
@@ -1302,7 +1465,7 @@ function MessageField({
                   )}
                   <div
                     style={{
-                      marginTop: "0.4rem",
+                      marginTop: "0.5rem",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
@@ -1322,11 +1485,11 @@ function MessageField({
                       <span
                         style={{
                           fontFamily: brand.font.mono,
-                          fontSize: "0.55rem",
-                          fontWeight: 500,
+                          fontSize: "0.65rem",
+                          fontWeight: 600,
                           color: brand.dark,
                           background: brand.grid,
-                          padding: "0.1rem 0.35rem",
+                          padding: "0.1rem 0.4rem",
                           borderRadius: "4px",
                           letterSpacing: "0.03em",
                         }}
@@ -1354,7 +1517,7 @@ function MessageField({
                 inset: 0,
                 zIndex: 20,
                 pointerEvents: "none",
-                animation: "splashBackdrop 3s ease-out forwards",
+                animation: "splashBackdrop 5s ease-out forwards",
                 borderRadius: "12px",
                 overflow: "hidden",
               }}
@@ -1397,7 +1560,7 @@ function MessageField({
                   borderRadius: "20px",
                   padding: "1.25rem",
                   boxShadow: "0 16px 48px rgba(26,26,24,0.2)",
-                  animation: "splashCard 3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+                  animation: "splashCard 5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
                 }}
               >
                 {splashMsg.photo_url && (
@@ -1459,6 +1622,31 @@ function MessageField({
             </div>
           );
         })()}
+
+        {/* See all button inside the field */}
+        {messages.length > 3 && (
+          <button
+            onClick={onSeeAll}
+            style={{
+              position: "absolute",
+              bottom: 12,
+              left: 16,
+              background: "rgba(255,255,255,0.85)",
+              backdropFilter: "blur(4px)",
+              border: `1px solid ${brand.border}`,
+              borderRadius: "20px",
+              padding: "0.35rem 0.85rem",
+              cursor: "pointer",
+              fontFamily: brand.font.mono,
+              fontSize: "0.65rem",
+              fontWeight: 500,
+              color: brand.dark,
+              zIndex: 10,
+            }}
+          >
+            See all {messages.length} messages
+          </button>
+        )}
       </div>
 
       {/* Popup — tap a bubble to read fully */}
@@ -1637,20 +1825,47 @@ function StickyMessageBar({
     return false;
   });
   const [message, setMessage] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setPhoto(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPhotoPreview(null);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!hasName && !name.trim()) return;
-    if (!message.trim()) return;
+    if (!message.trim() && !photo) return;
     setSending(true);
 
     const senderName = name.trim();
-    // Remember name for next time
     if (typeof window !== "undefined") {
       localStorage.setItem("athlast_name", senderName);
     }
     setHasName(true);
+
+    let photoUrl: string | null = null;
+    if (photo) {
+      const formData = new FormData();
+      formData.append("file", photo);
+      const uploadRes = await fetch("/api/race/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (uploadRes.ok) {
+        const data = await uploadRes.json();
+        photoUrl = data.url;
+      }
+    }
 
     const res = await fetch("/api/race/cheer", {
       method: "POST",
@@ -1659,14 +1874,16 @@ function StickyMessageBar({
         race_id: raceId,
         athlete_id: athleteId,
         sender_name: senderName,
-        message: message.trim(),
-        photo_url: null,
+        message: message.trim() || null,
+        photo_url: photoUrl,
         athlete_km_at_send: athleteKm,
       }),
     });
 
     if (res.ok) {
       setMessage("");
+      setPhoto(null);
+      setPhotoPreview(null);
       onSent();
     }
     setSending(false);
@@ -1711,7 +1928,70 @@ function StickyMessageBar({
             }}
           />
         )}
+        {photoPreview && (
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <img
+              src={photoPreview}
+              alt="Preview"
+              style={{
+                maxWidth: "100%",
+                maxHeight: 120,
+                borderRadius: "8px",
+                display: "block",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+              style={{
+                position: "absolute",
+                top: 4,
+                right: 4,
+                width: 24,
+                height: 24,
+                borderRadius: "50%",
+                background: "rgba(0,0,0,0.6)",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "flex-end" }}>
+          <label
+            style={{
+              width: 40,
+              height: 40,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              borderRadius: "50%",
+              border: `1px solid ${brand.border}`,
+            }}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoChange}
+              style={{ display: "none" }}
+            />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={brand.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </label>
           <input
             type="text"
             placeholder={`Send ${athleteName || "the athlete"} some support...`}
