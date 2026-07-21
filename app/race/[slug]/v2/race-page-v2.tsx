@@ -214,17 +214,14 @@ export function RacePageV2({
   // Lightbox
   const [lightboxMsg, setLightboxMsg] = useState<Message | null>(null);
 
-  // Message cycler
-  const [cycleIndex, setCycleIndex] = useState(0);
-  const textMessages = messages.filter((m) => !m.photo_url && m.message);
-  useEffect(() => {
-    if (textMessages.length <= 1) return;
-    const interval = setInterval(() => {
-      setCycleIndex((prev) => (prev + 1) % textMessages.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [textMessages.length]);
 
+  // Splash image loaded
+  const [splashReady, setSplashReady] = useState(false);
+
+  // Input mode: null = closed, "photo" = photo picker, "message" = text input
+  const [inputMode, setInputMode] = useState<"photo" | "message" | null>(null);
+
+  // Message cycler
   // New message splash
   const [splashMsg, setSplashMsg] = useState<Message | null>(null);
   const prevCountRef = useRef(messages.length);
@@ -236,6 +233,7 @@ export function RacePageV2({
     const next = splashQueueRef.current.shift();
     if (!next) return;
     splashActiveRef.current = true;
+    setSplashReady(!next.photo_url);
     setSplashMsg(next);
     setTimeout(() => {
       setSplashMsg(null);
@@ -252,6 +250,9 @@ export function RacePageV2({
     }
     prevCountRef.current = messages.length;
   }, [messages.length]);
+
+  // Filter text messages (defined after splashMsg)
+  const filteredTextMessages = messages.filter((m) => !m.photo_url && m.message && m.id !== splashMsg?.id);
 
   return (
     <div style={{ minHeight: "100vh", background: brand.bg }}>
@@ -279,9 +280,25 @@ export function RacePageV2({
           40% { opacity: 1; transform: scale(1.05); }
           100% { opacity: 1; transform: scale(1); }
         }
+        @keyframes splashOverlayIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes splashCardIn {
+          0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes firework {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--fx), var(--fy)) scale(0); opacity: 0; }
+        }
         @keyframes splashOut {
           0% { opacity: 1; transform: scale(1); }
           100% { opacity: 0; transform: scale(0.9) translateY(-8px); }
+        }
+        @keyframes btnBounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
         }
         @keyframes shimmer {
           0% { background-position: -200% 0; }
@@ -597,173 +614,251 @@ export function RacePageV2({
       {/* ─── Content ─── */}
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 4rem" }}>
 
-        {/* Message input */}
-        <MessageInput
-          raceId={race.id}
-          athleteId={selectedAthlete}
-          athleteName={athlete?.athletes.first_name ?? ""}
-          athleteKm={estimatedKm}
-          onSent={pollMessages}
-        />
-        {/* New message splash */}
-        {splashMsg && (
-          <div
-            key={splashMsg.id}
-            style={{
-              margin: "1.5rem 0",
-              padding: "1.5rem",
-              background: "#fff",
-              border: `1px solid ${brand.border}`,
-              borderRadius: "16px",
-              boxShadow: "0 4px 24px rgba(26,26,24,0.08)",
-              animation: "splashIn 0.4s ease-out",
-            }}
-          >
-            {splashMsg.photo_url && (
-              <img
-                src={splashMsg.photo_url}
-                alt=""
+
+        {/* Photos — two column flex */}
+        {(() => {
+          const photoMessages = messages.filter((m) => m.photo_url && m.id !== splashMsg?.id);
+          if (photoMessages.length === 0) return null;
+
+          // Split into two columns, alternating
+          const col1: Message[] = [];
+          const col2: Message[] = [];
+          photoMessages.forEach((msg, i) => (i % 2 === 0 ? col1 : col2).push(msg));
+
+          const renderPhoto = (msg: Message, i: number) => (
+            <div
+              key={msg.id}
+              style={{
+                marginBottom: "0.75rem",
+                cursor: "pointer",
+                animation: `fadeInUp 0.4s ease-out ${i * 0.06}s both, bubbleFloat ${4 + (i % 3)}s ease-in-out ${(i * 0.8) % 3}s infinite`,
+              }}
+            >
+              <div
+                onClick={() => setLightboxMsg(msg)}
                 style={{
-                  width: "100%",
-                  borderRadius: "10px",
-                  marginBottom: "1rem",
-                  display: "block",
+                  position: "relative",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)",
+                  transition: "transform 0.25s ease, box-shadow 0.25s ease",
                 }}
-              />
-            )}
-            {splashMsg.message && (
-              <p
-                style={{
-                  margin: "0 0 0.75rem",
-                  fontFamily: brand.font.display,
-                  fontSize: "1.2rem",
-                  fontStyle: "italic",
-                  lineHeight: 1.5,
-                  color: brand.dark,
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.03) translateY(-4px)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(26,26,24,0.1), 0 16px 40px rgba(26,26,24,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)";
                 }}
               >
-                &ldquo;{splashMsg.message}&rdquo;
-              </p>
-            )}
-            <span
-              style={{
-                fontFamily: brand.font.body,
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                color: brand.dark,
-              }}
-            >
-              {splashMsg.sender_name}
-            </span>
-          </div>
-        )}
-
-        {/* Photos — masonry */}
-        {(() => {
-          const photoMessages = messages.filter((m) => m.photo_url);
-          if (photoMessages.length === 0) return null;
-          return (
-            <div
-              style={{
-                columnCount: 2,
-                columnGap: "0.75rem",
-                marginTop: "1.5rem",
-              }}
-            >
-              {photoMessages.map((msg, i) => (
+                <img src={msg.photo_url!} alt="" style={{ width: "100%", display: "block" }} />
                 <div
-                  key={msg.id}
                   style={{
-                    breakInside: "avoid",
-                    marginBottom: "0.75rem",
-                    cursor: "pointer",
-                    animation: `fadeInUp 0.4s ease-out ${i * 0.06}s both, bubbleFloat ${4 + (i % 3)}s ease-in-out ${(i * 0.8) % 3}s infinite`,
+                    position: "absolute",
+                    bottom: 0, left: 0, right: 0,
+                    padding: "0.5rem 0.6rem",
+                    background: "rgba(0,0,0,0.35)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
                   }}
                 >
-                  <div
-                    onClick={() => setLightboxMsg(msg)}
-                    style={{
-                      position: "relative",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      boxShadow: "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)",
-                      transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "scale(1.03) translateY(-4px)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(26,26,24,0.1), 0 16px 40px rgba(26,26,24,0.15)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "";
-                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)";
-                    }}
-                  >
-                    <img
-                      src={msg.photo_url!}
-                      alt=""
-                      style={{ width: "100%", display: "block" }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        padding: "0.5rem 0.6rem",
-                        background: "rgba(0,0,0,0.35)",
-                        backdropFilter: "blur(8px)",
-                        WebkitBackdropFilter: "blur(8px)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: brand.font.body,
-                          fontSize: "0.85rem",
-                          fontWeight: 600,
-                          color: "#fff",
-                        }}
-                      >
-                        From {msg.sender_name}
-                      </span>
-                      {msg.message && (
-                        <p
-                          style={{
-                            margin: "0.15rem 0 0",
-                            fontFamily: brand.font.body,
-                            fontSize: "0.8rem",
-                            lineHeight: 1.3,
-                            color: "rgba(255,255,255,0.85)",
-                          }}
-                        >
-                          {msg.message}
-                        </p>
-                      )}
+                  <span style={{ fontFamily: brand.font.body, fontSize: "0.85rem", fontWeight: 600, color: "#fff" }}>
+                    From {msg.sender_name}
+                  </span>
+                  {msg.message && (
+                    <p style={{ margin: "0.15rem 0 0", fontFamily: brand.font.body, fontSize: "0.8rem", lineHeight: 1.3, color: "rgba(255,255,255,0.85)" }}>
+                      {msg.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+
+          // Filler goes in the shorter column
+          const fillerTile = (
+            <div
+              key="filler"
+              style={{
+                flex: 1,
+                animation: "bubbleFloat 4.5s ease-in-out 0.3s infinite",
+              }}
+            >
+              <button
+                onClick={() => setInputMode("photo")}
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "100%",
+                  background: brand.dark,
+                  border: "none",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 20px rgba(26,26,24,0.25)",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.03)";
+                  e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,26,24,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,26,24,0.25)";
+                }}
+              >
+                {/* Diagonal watermark */}
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: -40,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "18px",
+                    transform: "rotate(-25deg)",
+                    transformOrigin: "center center",
+                    pointerEvents: "none",
+                    opacity: 0.06,
+                  }}
+                >
+                  {Array.from({ length: 10 }).map((_, row) => (
+                    <div key={row} style={{ display: "flex", gap: "24px", marginLeft: row % 2 === 0 ? 0 : -40, whiteSpace: "nowrap" }}>
+                      {Array.from({ length: 6 }).map((_, col) => (
+                        <span key={col} style={{ fontFamily: brand.font.display, fontSize: "1rem", color: "#fff", flexShrink: 0 }}>
+                          Athlast.
+                        </span>
+                      ))}
                     </div>
+                  ))}
+                </div>
+                <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={brand.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto 0.5rem" }}>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <div style={{ fontFamily: brand.font.body, fontSize: "0.9rem", fontWeight: 600, color: "#fff" }}>
+                    Add another photo
                   </div>
                 </div>
-              ))}
+              </button>
+            </div>
+          );
+
+          // Add filler to the shorter column
+          const shorterCol = col1.length > col2.length ? "left" : "right";
+
+          return (
+            <div style={{ position: "relative", marginTop: "1.5rem" }}>
+            {/* Add photo — top right */}
+            <div
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 4,
+                zIndex: 5,
+                animation: "bubbleFloat 4s ease-in-out 0.5s infinite",
+              }}
+            >
+              <button
+                onClick={() => setInputMode("photo")}
+                style={{
+                  padding: "0.55rem 1.1rem",
+                  background: brand.dark,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "999px",
+                  fontFamily: brand.font.body,
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 20px rgba(26,26,24,0.25)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.1)";
+                  e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,26,24,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,26,24,0.25)";
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add photo
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "stretch" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                {col1.map((msg, i) => renderPhoto(msg, i * 2))}
+                {shorterCol === "left" && fillerTile}
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                {col2.map((msg, i) => renderPhoto(msg, i * 2 + 1))}
+                {shorterCol === "right" && fillerTile}
+              </div>
+            </div>
             </div>
           );
         })()}
 
         {/* Message bubbles — scattered floating field */}
         {(() => {
-          if (textMessages.length === 0) return null;
+          if (filteredTextMessages.length === 0) return (
+            <div style={{ margin: "1.5rem -1rem 0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ animation: "bubbleFloat 4s ease-in-out infinite" }}>
+                <button
+                  onClick={() => setInputMode("message")}
+                  style={{
+                    padding: "0.6rem 1.3rem",
+                    background: brand.dark,
+                    color: "#fff",
+                    borderRadius: "999px",
+                    border: "none",
+                    boxShadow: "0 4px 20px rgba(26,26,24,0.25)",
+                    cursor: "pointer",
+                    fontFamily: brand.font.body,
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Send a message
+                </button>
+              </div>
+            </div>
+          );
 
           const BUBBLE_SPACE = 190;
           const PADDING = 30;
-          const fieldWidth = PADDING + Math.max(textMessages.length * BUBBLE_SPACE, 400) + PADDING;
+          const fieldWidth = PADDING + Math.max(filteredTextMessages.length * BUBBLE_SPACE, 400) + PADDING;
 
           // X: evenly spaced with jitter
-          const bubbleX = textMessages.map((_, i) => {
-            const base = PADDING + (i / Math.max(textMessages.length - 1, 1)) * (fieldWidth - PADDING * 2 - 180) + 90;
+          const bubbleX = filteredTextMessages.map((_, i) => {
+            const base = PADDING + (i / Math.max(filteredTextMessages.length - 1, 1)) * (fieldWidth - PADDING * 2 - 180) + 90;
             const jitter = ((i * 11 + 5) % 9 - 4) * 6;
             return base + jitter;
           });
 
           // Y: pre-scattered positions that don't repeat obviously
           const ySlots = [15, 140, 70, 190, 45, 160, 100, 20, 130, 60, 180, 35, 150, 85, 10, 120];
-          const bubbleY = textMessages.map((_, i) => ySlots[i % ySlots.length]);
+          const bubbleY = filteredTextMessages.map((_, i) => ySlots[i % ySlots.length]);
 
           // Sizes: vary width
           const widths = [175, 210, 155, 195, 185];
@@ -782,18 +877,18 @@ export function RacePageV2({
           }
 
           // Duplicate for seamless loop
-          const doubled = [...textMessages, ...textMessages];
+          const doubled = [...filteredTextMessages, ...filteredTextMessages];
           const halfWidth = fieldWidth;
           const totalWidth = halfWidth * 2;
-          const driftDuration = Math.max(textMessages.length * 5, 25);
+          const driftDuration = Math.max(filteredTextMessages.length * 5, 25);
 
           // Recalculate positions for doubled set
           const allX = doubled.map((_, i) => {
-            const idx = i % textMessages.length;
-            const half = i < textMessages.length ? 0 : halfWidth;
+            const idx = i % filteredTextMessages.length;
+            const half = i < filteredTextMessages.length ? 0 : halfWidth;
             return bubbleX[idx] + half;
           });
-          const allY = doubled.map((_, i) => bubbleY[i % textMessages.length]);
+          const allY = doubled.map((_, i) => bubbleY[i % filteredTextMessages.length]);
 
           return (
             <div
@@ -803,6 +898,50 @@ export function RacePageV2({
                 overflow: "hidden",
               }}
             >
+              {/* Send message button */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 20,
+                  zIndex: 10,
+                  animation: "bubbleFloat 4s ease-in-out 0.5s infinite",
+                }}
+              >
+                <button
+                  onClick={() => setInputMode("message")}
+                  style={{
+                    padding: "0.55rem 1.1rem",
+                    background: brand.dark,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "999px",
+                    fontFamily: brand.font.body,
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 20px rgba(26,26,24,0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.1)";
+                    e.currentTarget.style.boxShadow = "0 6px 28px rgba(26,26,24,0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "0 4px 20px rgba(26,26,24,0.25)";
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Send message
+                </button>
+              </div>
               {/* Crowd silhouette */}
               <img
                 src="/crowd.svg"
@@ -830,7 +969,7 @@ export function RacePageV2({
                 }}
               >
                 {doubled.map((msg, i) => {
-                  const idx = i % textMessages.length;
+                  const idx = i % filteredTextMessages.length;
                   const w = widths[idx % widths.length];
                   const rot = rotations[idx % rotations.length];
                   const floatDur = 3.5 + (idx % 3);
@@ -907,6 +1046,159 @@ export function RacePageV2({
           );
         })()}
       </div>
+
+      {/* New message splash — full screen takeover */}
+      {splashMsg && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            opacity: splashReady ? 1 : 0,
+            animation: splashReady ? "splashOverlayIn 0.3s ease-out" : "none",
+            pointerEvents: splashReady ? "auto" : "none",
+          }}
+        >
+          {/* Fireworks */}
+          {Array.from({ length: 24 }).map((_, pi) => {
+            const angle = (pi / 24) * 360;
+            const dist = 100 + (pi * 17) % 140;
+            const fx = Math.cos((angle * Math.PI) / 180) * dist;
+            const fy = Math.sin((angle * Math.PI) / 180) * dist;
+            const colors = ["#f59e0b", "#ef4444", "#22c55e", "#3b82f6", "#a855f7", "#ec4899"];
+            const color = colors[pi % colors.length];
+            const size = 6 + (pi % 4) * 3;
+            return (
+              <div
+                key={pi}
+                style={{
+                  position: "fixed",
+                  left: "50%",
+                  top: "50%",
+                  width: size,
+                  height: size,
+                  borderRadius: "50%",
+                  background: color,
+                  pointerEvents: "none",
+                  zIndex: 101,
+                  // @ts-expect-error CSS custom properties
+                  "--fx": `${fx}px`,
+                  "--fy": `${fy}px`,
+                  animation: `firework 1s ease-out ${0.2 + (pi * 0.025)}s forwards`,
+                }}
+              />
+            );
+          })}
+
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: 380,
+              background: brand.bg,
+              borderRadius: "24px",
+              padding: "1.5rem",
+              boxShadow: "0 12px 48px rgba(0,0,0,0.3)",
+              textAlign: "center",
+              animation: splashReady ? "splashCardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" : "none",
+            }}
+          >
+            {splashMsg.photo_url && (
+              <img
+                src={splashMsg.photo_url}
+                alt=""
+                onLoad={() => setSplashReady(true)}
+                style={{
+                  width: "100%",
+                  borderRadius: "14px",
+                  marginBottom: "1rem",
+                  display: "block",
+                }}
+              />
+            )}
+            {splashMsg.message && (
+              <p
+                style={{
+                  margin: "0 0 0.75rem",
+                  fontFamily: brand.font.body,
+                  fontSize: "1.2rem",
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  color: brand.dark,
+                }}
+              >
+                {splashMsg.message}
+              </p>
+            )}
+            <span
+              style={{
+                fontFamily: brand.font.body,
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                color: brand.muted,
+              }}
+            >
+              {splashMsg.sender_name}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Input modal */}
+      {inputMode && (
+        <div
+          onClick={() => setInputMode(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            animation: "splashIn 0.3s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: brand.bg,
+              borderRadius: "24px",
+              padding: "1.5rem",
+              boxShadow: "0 12px 48px rgba(0,0,0,0.3)",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 1rem",
+                fontFamily: brand.font.display,
+                fontSize: "1.2rem",
+                fontWeight: 400,
+                color: brand.dark,
+                textAlign: "center",
+              }}
+            >
+              {inputMode === "photo" ? "Share a photo" : "Send a message"}
+            </h3>
+            <MessageInput
+              raceId={race.id}
+              athleteId={selectedAthlete}
+              athleteName={athlete?.athletes.first_name ?? ""}
+              athleteKm={estimatedKm}
+              onSent={() => { pollMessages(); setInputMode(null); }}
+              autoFocusPhoto={inputMode === "photo"}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightboxMsg && (
@@ -1015,12 +1307,14 @@ function MessageInput({
   athleteName,
   athleteKm,
   onSent,
+  autoFocusPhoto,
 }: {
   raceId: string;
   athleteId: string;
   athleteName: string;
   athleteKm: number | null;
   onSent: () => void;
+  autoFocusPhoto?: boolean;
 }) {
   const [name, setName] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("athlast_name") || "";
