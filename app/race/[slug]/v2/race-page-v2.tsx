@@ -221,6 +221,9 @@ export function RacePageV2({
   // Input mode: null = closed, "photo" = photo picker, "message" = text input
   const [inputMode, setInputMode] = useState<"photo" | "message" | null>(null);
 
+  // Splits modal
+  const [showSplits, setShowSplits] = useState(false);
+
   // Message cycler
   // New message splash
   const [splashMsg, setSplashMsg] = useState<Message | null>(null);
@@ -432,17 +435,39 @@ export function RacePageV2({
                 >
                   {athlete.athletes.first_name} {athlete.athletes.last_name}
                 </h1>
-                {athlete.bib_number && (
-                  <span
-                    style={{
-                      fontFamily: brand.font.mono,
-                      fontSize: "0.65rem",
-                      color: brand.muted,
-                    }}
-                  >
-                    BIB #{athlete.bib_number}
-                  </span>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.15rem" }}>
+                  {athlete.bib_number && (
+                    <span
+                      style={{
+                        fontFamily: brand.font.mono,
+                        fontSize: "0.65rem",
+                        color: brand.muted,
+                      }}
+                    >
+                      BIB #{athlete.bib_number}
+                    </span>
+                  )}
+                  {completedSplits.length > 0 && (
+                    <button
+                      onClick={() => setShowSplits(true)}
+                      style={{
+                        padding: "0.2rem 0.6rem",
+                        background: "rgba(255,255,255,0.5)",
+                        backdropFilter: "blur(6px)",
+                        WebkitBackdropFilter: "blur(6px)",
+                        border: "none",
+                        borderRadius: "999px",
+                        fontFamily: brand.font.mono,
+                        fontSize: "0.6rem",
+                        fontWeight: 600,
+                        color: brand.dark,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Splits
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -612,7 +637,7 @@ export function RacePageV2({
       </div>
 
       {/* ─── Content ─── */}
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 4rem" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 0" }}>
 
 
         {/* Photos — two column flex */}
@@ -812,6 +837,15 @@ export function RacePageV2({
           );
         })()}
 
+        {/* Section divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", margin: "2rem 0 0.5rem" }}>
+          <div style={{ flex: 1, height: 1, background: brand.border }} />
+          <span style={{ fontFamily: brand.font.display, fontSize: "0.9rem", color: brand.muted, whiteSpace: "nowrap" }}>
+            From the crowd
+          </span>
+          <div style={{ flex: 1, height: 1, background: brand.border }} />
+        </div>
+
         {/* Message bubbles — scattered floating field */}
         {(() => {
           if (filteredTextMessages.length === 0) return (
@@ -942,16 +976,16 @@ export function RacePageV2({
                   Send message
                 </button>
               </div>
-              {/* Crowd silhouette */}
+              {/* Crowd silhouette — stretched to cover bottom */}
               <img
                 src="/crowd.svg"
                 alt=""
                 style={{
                   position: "absolute",
-                  bottom: 0,
+                  bottom: -60,
                   left: 0,
                   width: "100%",
-                  height: 90,
+                  height: 200,
                   objectFit: "cover",
                   objectPosition: "top",
                   opacity: 0.35,
@@ -1046,6 +1080,7 @@ export function RacePageV2({
           );
         })()}
       </div>
+
 
       {/* New message splash — full screen takeover */}
       {splashMsg && (
@@ -1145,6 +1180,82 @@ export function RacePageV2({
             >
               {splashMsg.sender_name}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Splits modal */}
+      {showSplits && (
+        <div
+          onClick={() => setShowSplits(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            animation: "splashIn 0.3s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: brand.bg,
+              borderRadius: "24px",
+              padding: "1.5rem",
+              boxShadow: "0 12px 48px rgba(0,0,0,0.3)",
+              animation: "splashCardIn 0.4s ease-out",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 1rem",
+                fontFamily: brand.font.display,
+                fontSize: "1.2rem",
+                fontWeight: 400,
+                color: brand.dark,
+                textAlign: "center",
+              }}
+            >
+              Splits
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {athleteSplits.map((split) => (
+                <div
+                  key={split.Name}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0.6rem 0.75rem",
+                    background: split.Exists ? "#fff" : "transparent",
+                    borderRadius: "10px",
+                    opacity: split.Exists ? 1 : 0.4,
+                  }}
+                >
+                  <span style={{ fontFamily: brand.font.body, fontSize: "0.85rem", fontWeight: 600, color: brand.dark }}>
+                    {split.Name}
+                  </span>
+                  <div style={{ textAlign: "right" }}>
+                    {split.Chip && (
+                      <span style={{ fontFamily: brand.font.mono, fontSize: "0.8rem", fontWeight: 600, color: brand.dark }}>
+                        {split.Chip}
+                      </span>
+                    )}
+                    {split.Speed && (
+                      <span style={{ fontFamily: brand.font.mono, fontSize: "0.7rem", color: brand.muted, marginLeft: "0.5rem" }}>
+                        {split.Speed}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
