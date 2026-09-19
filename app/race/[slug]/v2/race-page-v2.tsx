@@ -412,6 +412,22 @@ export function RacePageV2({
         }}
       >
         <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 2 }}>
+          {/* Phil's photo — top right */}
+          {race.rtrt_event_code && (
+            <img
+              src="/phil.png"
+              alt=""
+              style={{
+                position: "absolute",
+                top: -8,
+                right: -4,
+                height: 160,
+                objectFit: "contain",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+          )}
           {/* Race name — big and bold */}
           <h2
             style={{
