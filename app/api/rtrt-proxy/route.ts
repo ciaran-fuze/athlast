@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
         buttons[i].click();
         return;
       }
+      // Auto-click "Spectator"
+      if (text === 'spectator' || text === 'a spectator' || text.indexOf('spectator') >= 0) {
+        buttons[i].click();
+        return;
+      }
     }
 
     // Also try to find and hide modal overlays that look like app prompts
@@ -63,16 +68,20 @@ export async function GET(request: NextRequest) {
   var checks = 0;
   var interval = setInterval(function() {
     checks++;
-    if (checks > 40) { clearInterval(interval); return; }
+    if (checks > 60) { clearInterval(interval); observer.disconnect(); return; }
 
-    // Click any "continue in browser" type button
+    // Auto-click through all RTRT prompts
     var allEls = document.querySelectorAll('button, a, div, span');
     for (var i = 0; i < allEls.length; i++) {
       var t = (allEls[i].textContent || '').toLowerCase().trim();
-      if (t === 'continue in browser' || t === 'continue on web' || t === 'use web' || t === 'continue on website') {
+      // Step 1: "Continue in browser"
+      if (t === 'continue in browser' || t === 'continue on web' || t === 'use web' || t === 'continue on website' || t === 'continue') {
         allEls[i].click();
-        clearInterval(interval);
-        observer.disconnect();
+        return;
+      }
+      // Step 2: "Spectator" (are you participating or spectator)
+      if (t === 'spectator' || t === 'a spectator' || t.indexOf('spectator') >= 0) {
+        allEls[i].click();
         return;
       }
     }
