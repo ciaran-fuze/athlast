@@ -611,7 +611,6 @@ export function RacePageV2({
                 border: "none",
                 display: "block",
               }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               allow="geolocation"
               title="Live tracker"
             />

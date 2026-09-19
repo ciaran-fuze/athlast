@@ -8,59 +8,68 @@ export async function GET(request: NextRequest) {
   const url = `https://app.rtrt.me/${event}?oe=1&loadpage=${encodeURIComponent(loadpage)}&event=${event}`;
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
       "Referer": `https://app.rtrt.me/${event}`,
     },
   });
   let html = await res.text();
 
-  // Remove app link meta tags
+  // Remove app link meta tags so no smart banners appear
   html = html.replace(/<meta\s+property="al:(ios|android)[^"]*"[^>]*>/gi, "");
   html = html.replace(/<meta\s+name="apple-itunes-app"[^>]*>/gi, "");
   html = html.replace(/<!--IOS Deep link-->|<!--Android Deep Link-->|<!--Default URL-->/gi, "");
   html = html.replace(/<meta\s+property="al:web[^"]*"[^>]*>/gi, "");
 
-  // Inject auto-dismiss script before </body>
-  const script = `
+  // Inject script at TOP of head to spoof desktop browser before RTRT code runs
+  const desktopSpoof = `
+<script>
+// Make RTRT think this is a desktop browser — skips "use mobile app" prompt
+try {
+  Object.defineProperty(navigator, 'userAgent', {
+    get: function() { return 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'; }
+  });
+} catch(e) {}
+// Override mobile detection helpers RTRT might use
+window.isMobile = false;
+document.documentElement.classList.remove('isMobile');
+</script>`;
+  html = html.replace("<head>", "<head>" + desktopSpoof);
+
+  // Inject auto-click for spectator prompt before </body>
+  const autoClick = `
 <script>
 (function() {
-  var dismissed = 0;
-  function clickThrough() {
+  function clickSpectator() {
     var els = document.querySelectorAll('button, a, div, span, li, td');
     for (var i = 0; i < els.length; i++) {
       var t = (els[i].textContent || '').toLowerCase().trim();
-      // Skip elements with lots of children (containers)
       if (els[i].children.length > 3) continue;
-      if (t === 'continue in browser' || t === 'continue on web' || t === 'use browser' || t === 'web') {
+      if (t === 'spectator' || t === 'a spectator' || t === "i'm a spectator" || t === 'spectating') {
         els[i].click();
-        dismissed++;
-        return;
+        return true;
       }
-      if (dismissed >= 1 && (t === 'spectator' || t === 'a spectator' || t === "i'm a spectator" || t === 'spectating')) {
+      if (t === 'continue in browser' || t === 'continue on web') {
         els[i].click();
-        dismissed++;
-        return;
+        return true;
       }
     }
+    return false;
   }
 
-  var observer = new MutationObserver(clickThrough);
+  var observer = new MutationObserver(clickSpectator);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  // Also poll
   var attempts = 0;
   var poll = setInterval(function() {
     attempts++;
-    clickThrough();
-    if (dismissed >= 2 || attempts > 80) {
+    clickSpectator();
+    if (attempts > 80) {
       clearInterval(poll);
       observer.disconnect();
     }
   }, 250);
 })();
 </script>`;
-
-  html = html.replace("</body>", script + "</body>");
+  html = html.replace("</body>", autoClick + "</body>");
 
   return new Response(html, {
     headers: {
