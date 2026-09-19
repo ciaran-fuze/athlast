@@ -412,18 +412,19 @@ export function RacePageV2({
         }}
       >
         <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 2 }}>
-          {/* Phil's photo — top right */}
+          {/* Phil's photo — top right, tappable */}
           {race.rtrt_event_code && (
             <img
               src="/phil.png"
-              alt=""
+              alt={athlete?.athletes.first_name ?? "Phil"}
+              onClick={() => setLightboxMsg({ id: "phil-photo", sender_name: athlete?.athletes.first_name ?? "Phil", photo_url: "/phil.png", message: null } as Message)}
               style={{
                 position: "absolute",
                 top: -8,
                 right: -4,
                 height: 160,
                 objectFit: "contain",
-                pointerEvents: "none",
+                cursor: "pointer",
                 zIndex: 1,
               }}
             />
