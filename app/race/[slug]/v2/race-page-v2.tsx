@@ -185,6 +185,19 @@ export function RacePageV2({
     return () => clearInterval(interval);
   }, [race.status, pollSplits, pollMessages]);
 
+  // Block RTRT iframe redirect attempts
+  useEffect(() => {
+    function blockRedirects(e: MessageEvent) {
+      if (typeof e.data === "string") {
+        if (e.data.startsWith("redir") || e.data.startsWith("open")) {
+          e.stopImmediatePropagation();
+        }
+      }
+    }
+    window.addEventListener("message", blockRedirects, true);
+    return () => window.removeEventListener("message", blockRedirects, true);
+  }, []);
+
   const athlete = raceAthletes.find(
     (ra) => ra.athlete_id === selectedAthlete
   );
@@ -604,14 +617,13 @@ export function RacePageV2({
             }}
           >
             <iframe
-              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
+              src={`/api/rtrt-proxy?event=${race.rtrt_event_code}&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}`}
               style={{
                 width: "100%",
                 height: 520,
                 border: "none",
                 display: "block",
               }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               allow="geolocation"
               title="Live tracker"
             />
