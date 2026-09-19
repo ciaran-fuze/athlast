@@ -25,6 +25,7 @@ interface Race {
   location: string;
   distance_km: number;
   status: string;
+  rtrt_event_code?: string;
 }
 
 interface Athlete {
@@ -330,24 +331,19 @@ export function RacePageV2({
         }
       `}</style>
 
-      {/* ─── Landscape Hero ─── */}
+      {/* ─── Hero ─── */}
       <div
         style={{
           position: "relative",
-          background: "linear-gradient(180deg, #c9dce8 0%, #dce8f0 40%, #e8f0f4 70%, #eef2eb 100%)",
-          padding: "2rem 1rem 0",
+          background: race.rtrt_event_code
+            ? brand.bg
+            : "linear-gradient(180deg, #c9dce8 0%, #dce8f0 40%, #e8f0f4 70%, #eef2eb 100%)",
+          padding: race.rtrt_event_code ? "2rem 1rem 1.5rem" : "2rem 1rem 0",
           overflow: "hidden",
-          minHeight: 280,
+          minHeight: race.rtrt_event_code ? undefined : 280,
         }}
       >
-        {/* Logo */}
         <div style={{ maxWidth: 640, margin: "0 auto", position: "relative", zIndex: 2 }}>
-          <img
-            src="/logo.png"
-            alt="Athlast."
-            style={{ height: 24, marginBottom: "1rem", opacity: 0.7 }}
-          />
-
           {/* Race name — big and bold */}
           <h2
             style={{
@@ -474,7 +470,9 @@ export function RacePageV2({
 
         </div>
 
-        {/* Landscape scene — hills + runner */}
+        {/* Landscape scene — only show when no RTRT embed */}
+        {!race.rtrt_event_code && (
+        <>
         <div
           style={{
             position: "relative",
@@ -503,7 +501,7 @@ export function RacePageV2({
             />
           </svg>
 
-          {/* Runner positioned by progress — label bounces with it */}
+          {/* Runner positioned by progress */}
           <div
             style={{
               position: "absolute",
@@ -589,9 +587,38 @@ export function RacePageV2({
             </svg>
           ))}
         </div>
+        </>
+        )}
       </div>
 
-      {/* Progress bar */}
+      {/* RTRT live tracker embed */}
+      {race.rtrt_event_code && (
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
+          <div
+            style={{
+              borderRadius: "16px",
+              overflow: "hidden",
+              border: `1px solid ${brand.border}`,
+              background: "#fff",
+            }}
+          >
+            <iframe
+              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${athlete?.bib_number ?? ""}`}
+              style={{
+                width: "100%",
+                height: 480,
+                border: "none",
+                display: "block",
+              }}
+              allow="geolocation"
+              title="Live tracker"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar — only show when no RTRT embed */}
+      {!race.rtrt_event_code && (
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "0.5rem 1rem 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
           <span style={{ fontFamily: brand.font.mono, fontSize: "0.8rem", fontWeight: 600, color: brand.dark }}>0km</span>
@@ -635,6 +662,7 @@ export function RacePageV2({
           )}
         </div>
       </div>
+      )}
 
       {/* ─── Content ─── */}
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 0" }}>
