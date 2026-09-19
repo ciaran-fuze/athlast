@@ -99,7 +99,19 @@ export async function GET(request: NextRequest) {
   html = html.replace(/<meta\s+property="al:(ios|android)[^"]*"[^>]*>/gi, '');
   html = html.replace(/<meta\s+name="apple-itunes-app"[^>]*>/gi, '');
 
-  // Inject our script right before </body>
+  // Inject redirect blocker right at the top of <head>
+  const redirectBlocker = `
+<script>
+// Block any attempts to redirect this page or parent
+if (window.top !== window) {
+  // We're in an iframe — block parent navigation
+  try { Object.defineProperty(window, 'top', { get: function() { return window; } }); } catch(e) {}
+  try { Object.defineProperty(window, 'parent', { get: function() { return window; } }); } catch(e) {}
+}
+</script>`;
+  html = html.replace('<head>', '<head>' + redirectBlocker);
+
+  // Inject auto-dismiss script right before </body>
   html = html.replace('</body>', injectedScript + '</body>');
 
   return new Response(html, {
