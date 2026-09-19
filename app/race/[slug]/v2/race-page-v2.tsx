@@ -592,7 +592,7 @@ export function RacePageV2({
         )}
       </div>
 
-      {/* RTRT live tracker embed — deep-linked to athlete */}
+      {/* RTRT live tracker — native embed script */}
       {race.rtrt_event_code && (
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
           <div
@@ -601,18 +601,12 @@ export function RacePageV2({
               overflow: "hidden",
               border: `1px solid ${brand.border}`,
               background: "#fff",
+              height: 520,
             }}
           >
-            <iframe
-              src={`https://app.rtrt.me/${race.rtrt_event_code}?oe=1&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}`}
-              style={{
-                width: "100%",
-                height: 520,
-                border: "none",
-                display: "block",
-              }}
-              allow="geolocation"
-              title="Live tracker"
+            <RtrtEmbed
+              eventCode={race.rtrt_event_code}
+              athleteId={race.rtrt_athlete_id}
             />
           </div>
         </div>
@@ -1436,6 +1430,42 @@ export function RacePageV2({
         </div>
       )}
     </div>
+  );
+}
+
+/* ─── RTRT Embed ─── */
+
+function RtrtEmbed({ eventCode, athleteId }: { eventCode: string; athleteId?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Set up the config that RTRT's embed script expects
+    const hash = athleteId ? `/tracker/${athleteId}/focus` : "/dashboard";
+    window.location.hash = hash;
+
+    const div = document.createElement("div");
+    div.id = "rt-app";
+    containerRef.current.appendChild(div);
+
+    const script = document.createElement("script");
+    script.src = `https://track.rtrt.me/js/embed.js?appid=4fcfd9946dc55ed05b123ecf&event=${eventCode}&responsive=1`;
+    script.async = true;
+    containerRef.current.appendChild(script);
+
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
+  }, [eventCode, athleteId]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ width: "100%", height: "100%", position: "relative" }}
+    />
   );
 }
 
