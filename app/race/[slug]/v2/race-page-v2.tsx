@@ -605,9 +605,47 @@ export function RacePageV2({
         )}
       </div>
 
+      {/* Send Phil a message — above tracker */}
+      {race.rtrt_event_code && (
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0.75rem 1rem" }}>
+          <button
+            onClick={() => setInputMode("message")}
+            style={{
+              width: "100%",
+              padding: "1rem",
+              background: brand.dark,
+              color: "#fff",
+              border: "none",
+              borderRadius: "16px",
+              fontFamily: brand.font.body,
+              fontSize: "1.1rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 6px 28px rgba(26,26,24,0.35)",
+            }}
+          >
+            Send {athlete?.athletes.first_name ?? "Phil"} a message!
+          </button>
+        </div>
+      )}
+
       {/* RTRT live tracker embed */}
       {race.rtrt_event_code && (
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
+          <span
+            style={{
+              display: "block",
+              fontFamily: brand.font.mono,
+              fontSize: "0.65rem",
+              color: brand.muted,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: "0.4rem",
+              paddingLeft: "0.25rem",
+            }}
+          >
+            Track {athlete?.athletes.first_name ?? "Phil"}
+          </span>
           <div
             style={{
               borderRadius: "16px",
@@ -620,7 +658,7 @@ export function RacePageV2({
               src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
               style={{
                 width: "100%",
-                height: 520,
+                height: 360,
                 border: "none",
                 display: "block",
               }}
