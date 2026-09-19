@@ -617,7 +617,7 @@ export function RacePageV2({
             }}
           >
             <iframe
-              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
+              src={`/api/rtrt-proxy?event=${race.rtrt_event_code}&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}`}
               style={{
                 width: "100%",
                 height: 520,
@@ -1450,8 +1450,8 @@ export function RacePageV2({
         </div>
       )}
 
-      {/* Floating CTA — always visible */}
-      {!inputMode && !lightboxMsg && !showSplits && !splashMsg && (
+      {/* Floating CTA — hidden while tracker loads */}
+      {false && !inputMode && !lightboxMsg && !showSplits && !splashMsg && (
         <div
           style={{
             position: "fixed",
