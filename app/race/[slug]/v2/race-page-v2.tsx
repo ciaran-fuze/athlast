@@ -1436,6 +1436,42 @@ export function RacePageV2({
           )}
         </div>
       )}
+
+      {/* Floating CTA — always visible */}
+      {!inputMode && !lightboxMsg && !showSplits && !splashMsg && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: "0.75rem 1rem",
+            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            zIndex: 50,
+            background: `linear-gradient(transparent, ${brand.bg} 30%)`,
+          }}
+        >
+          <button
+            onClick={() => setInputMode("message")}
+            style={{
+              width: "100%",
+              padding: "1rem",
+              background: brand.dark,
+              color: "#fff",
+              border: "none",
+              borderRadius: "16px",
+              fontFamily: brand.font.body,
+              fontSize: "1.1rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 6px 28px rgba(26,26,24,0.35)",
+              letterSpacing: "0.01em",
+            }}
+          >
+            Send Phil a message!
+          </button>
+        </div>
+      )}
     </div>
   );
 }
