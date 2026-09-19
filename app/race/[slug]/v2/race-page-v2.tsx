@@ -720,6 +720,35 @@ export function RacePageV2({
               title="Live tracker"
             />
           </div>
+          {/* Scroll indicator */}
+          <button
+            onClick={() => {
+              const el = document.getElementById("support-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.4rem",
+              width: "100%",
+              marginTop: "0.75rem",
+              padding: "0.6rem",
+              background: "none",
+              border: `1px solid ${brand.border}`,
+              borderRadius: "12px",
+              fontFamily: brand.font.body,
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: brand.muted,
+              cursor: "pointer",
+            }}
+          >
+            See Philip&apos;s support
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </div>
       )}
 
@@ -771,7 +800,7 @@ export function RacePageV2({
       )}
 
       {/* ─── Content ─── */}
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 0" }}>
+      <div id="support-section" style={{ maxWidth: 640, margin: "0 auto", padding: "1.25rem 1rem 0" }}>
 
 
         {/* Photos — two column flex */}
