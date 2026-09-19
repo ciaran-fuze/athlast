@@ -604,7 +604,7 @@ export function RacePageV2({
             }}
           >
             <iframe
-              src={`https://app.rtrt.me/${race.rtrt_event_code}?oe=1&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}&event=${race.rtrt_event_code}`}
+              src={`/api/rtrt-proxy?event=${race.rtrt_event_code}&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}`}
               style={{
                 width: "100%",
                 height: 520,
