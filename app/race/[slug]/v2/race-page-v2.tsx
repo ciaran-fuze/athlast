@@ -617,14 +617,14 @@ export function RacePageV2({
             }}
           >
             <iframe
-              src={`/api/rtrt-proxy?event=${race.rtrt_event_code}&loadpage=${encodeURIComponent(`/tracker/${race.rtrt_athlete_id ?? ""}/focus`)}`}
+              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
               style={{
                 width: "100%",
                 height: 520,
                 border: "none",
                 display: "block",
               }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               allow="geolocation"
               title="Live tracker"
             />
