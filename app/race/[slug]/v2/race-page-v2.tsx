@@ -26,6 +26,7 @@ interface Race {
   distance_km: number;
   status: string;
   rtrt_event_code?: string;
+  rtrt_athlete_id?: string;
 }
 
 interface Athlete {
@@ -591,7 +592,7 @@ export function RacePageV2({
         )}
       </div>
 
-      {/* RTRT live tracker embed */}
+      {/* RTRT live tracker embed — deep-linked to athlete */}
       {race.rtrt_event_code && (
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
           <div
@@ -603,10 +604,10 @@ export function RacePageV2({
             }}
           >
             <iframe
-              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${athlete?.bib_number ?? ""}`}
+              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
               style={{
                 width: "100%",
-                height: 480,
+                height: 520,
                 border: "none",
                 display: "block",
               }}
