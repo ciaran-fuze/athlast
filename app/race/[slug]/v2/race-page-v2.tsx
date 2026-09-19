@@ -662,7 +662,7 @@ export function RacePageV2({
               boxShadow: "0 6px 28px rgba(26,26,24,0.35)",
             }}
           >
-            Send {athlete?.athletes.first_name ?? "Phil"} a message!
+            Send Philip Your Support
           </button>
         </div>
       )}
