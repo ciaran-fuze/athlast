@@ -14,14 +14,9 @@ export async function GET(request: NextRequest) {
   html = html.replace(/<meta\s+property="al:(ios|android)[^"]*"[^>]*>/gi, "");
   html = html.replace(/<meta\s+name="apple-itunes-app"[^>]*>/gi, "");
 
-  // Inject BEFORE everything else: fake being top window + desktop UA
-  const earlyScript = `
+  // Spoof desktop user-agent before RTRT code runs
+  const script = `
 <script>
-// Prevent frame-busting — make RTRT think this is the top window
-try { Object.defineProperty(window, 'top', { get: function() { return window; } }); } catch(e) {}
-try { Object.defineProperty(window, 'parent', { get: function() { return window; } }); } catch(e) {}
-
-// Desktop user-agent — skip mobile app prompt
 try {
   Object.defineProperty(navigator, 'userAgent', {
     get: function() { return 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'; }
@@ -29,8 +24,7 @@ try {
 } catch(e) {}
 window.isMobile = false;
 </script>`;
-
-  html = html.replace("<head>", "<head>" + earlyScript);
+  html = html.replace("<head>", "<head>" + script);
 
   return new Response(html, {
     headers: {
