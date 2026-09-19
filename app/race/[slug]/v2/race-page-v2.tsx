@@ -1810,7 +1810,26 @@ function MessageInput({
             </button>
           </div>
         )}
-        <div style={{ display: "flex", gap: "0.4rem", alignItems: "flex-end" }}>
+        <textarea
+          placeholder={`Send ${athleteName || "the athlete"} some support...`}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={3}
+          style={{
+            width: "100%",
+            padding: "0.6rem 0.75rem",
+            border: `1px solid ${brand.border}`,
+            borderRadius: "12px",
+            fontSize: "16px",
+            fontFamily: brand.font.body,
+            outline: "none",
+            background: brand.bg,
+            color: brand.dark,
+            resize: "none",
+            boxSizing: "border-box",
+          }}
+        />
+        <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
           <label
             style={{
               width: 40,
@@ -1837,44 +1856,23 @@ function MessageInput({
               <polyline points="21 15 16 10 5 21" />
             </svg>
           </label>
-          <input
-            type="text"
-            placeholder={`Send ${athleteName || "the athlete"} some support...`}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "0.6rem 0.75rem",
-              border: `1px solid ${brand.border}`,
-              borderRadius: "20px",
-              fontSize: "16px",
-              fontFamily: brand.font.body,
-              outline: "none",
-              background: brand.bg,
-              color: brand.dark,
-            }}
-          />
           <button
             type="submit"
             disabled={sending}
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
+              flex: 1,
+              padding: "0.7rem",
+              borderRadius: "12px",
               background: sending ? brand.grid : brand.dark,
               color: "#fff",
               border: "none",
               cursor: sending ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
+              fontFamily: brand.font.body,
+              fontSize: "0.9rem",
+              fontWeight: 600,
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
+            {sending ? "Sending..." : "Send"}
           </button>
         </div>
         {hasName && (
