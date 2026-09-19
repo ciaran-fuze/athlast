@@ -56,6 +56,60 @@ interface Message {
   created_at: string;
 }
 
+function LiveCountdown({ raceDate }: { raceDate: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Race starts at 9:00 AM Dublin time (Europe/Dublin = IST = UTC+1 in summer)
+  const raceStart = new Date(`${raceDate}T09:00:00+01:00`).getTime();
+  const diff = raceStart - now;
+
+  if (diff <= 0) {
+    return (
+      <span
+        style={{
+          padding: "0.2rem 0.6rem",
+          borderRadius: "999px",
+          fontFamily: "var(--font-mono), monospace",
+          fontSize: "0.65rem",
+          fontWeight: 500,
+          background: "#dcfce7",
+          color: "#166534",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        ● Live
+      </span>
+    );
+  }
+
+  const hours = Math.floor(diff / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+
+  return (
+    <span
+      style={{
+        padding: "0.2rem 0.6rem",
+        borderRadius: "999px",
+        fontFamily: "var(--font-mono), monospace",
+        fontSize: "0.65rem",
+        fontWeight: 500,
+        background: "#fef3c7",
+        color: "#92400e",
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+      }}
+    >
+      Starts in {hours > 0 ? `${hours}h ` : ""}{mins}m {secs}s
+    </span>
+  );
+}
+
 function splitNameToKm(name: string, raceDistanceKm: number): number | null {
   if (name === "Startline" || name === "Start") return 0;
   if (name === "Finishline" || name === "Finish") return raceDistanceKm;
@@ -381,23 +435,7 @@ export function RacePageV2({
               marginBottom: "0.75rem",
             }}
           >
-            {race.status === "live" && (
-              <span
-                style={{
-                  padding: "0.2rem 0.6rem",
-                  borderRadius: "999px",
-                  fontFamily: brand.font.mono,
-                  fontSize: "0.65rem",
-                  fontWeight: 500,
-                  background: "#dcfce7",
-                  color: "#166534",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                ● Live
-              </span>
-            )}
+            {race.status === "live" && <LiveCountdown raceDate={race.race_date} />}
             <span
               style={{
                 fontFamily: brand.font.mono,
@@ -632,20 +670,18 @@ export function RacePageV2({
       {/* RTRT live tracker embed */}
       {race.rtrt_event_code && (
         <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
-          <span
+          <h3
             style={{
-              display: "block",
-              fontFamily: brand.font.mono,
-              fontSize: "0.65rem",
-              color: brand.muted,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: "0.4rem",
+              margin: "0 0 0.5rem",
+              fontFamily: brand.font.display,
+              fontSize: "1.15rem",
+              fontWeight: 400,
+              color: brand.dark,
               paddingLeft: "0.25rem",
             }}
           >
             Track {athlete?.athletes.first_name ?? "Phil"}
-          </span>
+          </h3>
           <div
             style={{
               borderRadius: "16px",
