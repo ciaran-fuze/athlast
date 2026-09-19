@@ -1570,7 +1570,50 @@ export function RacePageV2({
         </div>
       )}
 
-      {/* Floating CTA — hidden while tracker loads */}
+      {/* Floating scroll indicator */}
+      {race.rtrt_event_code && !inputMode && !lightboxMsg && !showSplits && !splashMsg && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+          }}
+        >
+          <button
+            onClick={() => {
+              const el = document.getElementById("support-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            style={{
+              padding: "0.5rem 1.2rem",
+              background: "rgba(26,26,24,0.85)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "999px",
+              fontFamily: brand.font.body,
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 4px 20px rgba(26,26,24,0.3)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              animation: "bubbleFloat 3s ease-in-out infinite",
+            }}
+          >
+            See Philip&apos;s support
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Floating CTA — disabled */}
       {false && !inputMode && !lightboxMsg && !showSplits && !splashMsg && (
         <div
           style={{
