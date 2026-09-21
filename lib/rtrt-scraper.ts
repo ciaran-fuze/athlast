@@ -1,4 +1,4 @@
-import { chromium, type Browser, type Page, type Frame } from "playwright";
+import { type Browser, type Page, type Frame } from "playwright-core";
 
 export interface RtrtSplit {
   name: string;
@@ -28,7 +28,20 @@ export async function scrapeRtrtAthlete(
   let browser: Browser | null = null;
 
   try {
-    browser = await chromium.launch({ headless: true });
+    // Use @sparticuz/chromium on Vercel (Linux), regular Playwright locally
+    if (process.platform === "linux") {
+      const chromium = (await import("@sparticuz/chromium")).default;
+      const { chromium: pw } = await import("playwright-core");
+      const executablePath = await chromium.executablePath();
+      browser = await pw.launch({
+        args: chromium.args,
+        executablePath,
+        headless: true,
+      });
+    } else {
+      const { chromium: pw } = await import("playwright");
+      browser = await pw.launch({ headless: true });
+    }
     const context = await browser.newContext({
       userAgent:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
