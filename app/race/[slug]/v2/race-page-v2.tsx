@@ -684,72 +684,13 @@ export function RacePageV2({
         </div>
       )}
 
-      {/* RTRT live tracker embed */}
-      {race.rtrt_event_code && (
-        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0.5rem" }}>
-          <h3
-            style={{
-              margin: "0 0 0.5rem",
-              fontFamily: brand.font.display,
-              fontSize: "1.15rem",
-              fontWeight: 400,
-              color: brand.dark,
-              paddingLeft: "0.25rem",
-            }}
-          >
-            Track {athlete?.athletes.first_name ?? "Phil"}
-          </h3>
-          <div
-            style={{
-              borderRadius: "16px",
-              overflow: "hidden",
-              border: `1px solid ${brand.border}`,
-              background: "#fff",
-            }}
-          >
-            <iframe
-              src={`https://track.rtrt.me/e/${race.rtrt_event_code}#/tracker/${race.rtrt_athlete_id ?? ""}/focus`}
-              style={{
-                width: "100%",
-                height: 360,
-                border: "none",
-                display: "block",
-              }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              allow="geolocation"
-              title="Live tracker"
-            />
-          </div>
-          {/* Scroll indicator */}
-          <button
-            onClick={() => {
-              const el = document.getElementById("support-section");
-              if (el) el.scrollIntoView({ behavior: "smooth" });
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.4rem",
-              width: "100%",
-              marginTop: "0.75rem",
-              padding: "0.6rem",
-              background: "none",
-              border: `1px solid ${brand.border}`,
-              borderRadius: "12px",
-              fontFamily: brand.font.body,
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              color: brand.muted,
-              cursor: "pointer",
-            }}
-          >
-            See Philip&apos;s support
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </div>
+      {/* Minimal tracker */}
+      {race.rtrt_event_code && athlete && (
+        <MiniTracker
+          raceAthleteId={athlete.id}
+          athleteName={athlete.athletes.first_name}
+          distanceKm={race.distance_km}
+        />
       )}
 
       {/* Progress bar — only show when no RTRT embed */}
@@ -1649,6 +1590,251 @@ export function RacePageV2({
         </div>
       )}
     </div>
+  );
+}
+
+/* ─── Mini Tracker ─── */
+
+function MiniTracker({
+  raceAthleteId,
+  athleteName,
+  distanceKm,
+}: {
+  raceAthleteId: string;
+  athleteName: string;
+  distanceKm: number;
+}) {
+  const [tracking, setTracking] = useState<{
+    splits: Array<{ name: string; time: string | null; pace: string | null }>;
+    finish_time: string | null;
+    avg_pace: string | null;
+    overall_place: number | null;
+    overall_total: number | null;
+    status: string;
+  } | null>(null);
+  const [showSplitsModal, setShowSplitsModal] = useState(false);
+
+  const fetchTracking = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/race/tracking?race_athlete_id=${raceAthleteId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTracking(data.tracking);
+      }
+    } catch {}
+  }, [raceAthleteId]);
+
+  useEffect(() => {
+    fetchTracking();
+    const interval = setInterval(fetchTracking, 30000);
+    return () => clearInterval(interval);
+  }, [fetchTracking]);
+
+  if (!tracking) return null;
+
+  // Calculate progress
+  const splitDistances: Record<string, number> = {
+    START: 0,
+    "5K": 5,
+    "10K": 10,
+    HALFWAY: distanceKm / 2,
+    "15K": 15,
+    "20K": 20,
+    "25K": 25,
+    "30K": 30,
+    "35K": 35,
+    "40K": 40,
+    "11M": 17.7,
+    FINISH: distanceKm,
+  };
+
+  const completedSplits = tracking.splits.filter((s) => s.time);
+  const lastSplit = completedSplits[completedSplits.length - 1];
+  const lastSplitKm = lastSplit ? (splitDistances[lastSplit.name] ?? 0) : 0;
+  const progressPct = tracking.status === "finished" ? 100 : Math.round((lastSplitKm / distanceKm) * 100);
+
+  // Estimate finish from avg pace
+  const estimatedFinish = (() => {
+    if (tracking.finish_time) return tracking.finish_time;
+    if (!tracking.avg_pace || completedSplits.length < 2) return null;
+    const parts = tracking.avg_pace.split(":").map(Number);
+    const paceSeconds = parts[0] * 60 + parts[1]; // per mile
+    const totalMiles = distanceKm / 1.60934;
+    const totalSeconds = paceSeconds * totalMiles;
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  })();
+
+  const statusLabel = tracking.status === "finished" ? "Finished" : tracking.status === "racing" ? "Racing" : "Not started";
+  const currentPace = lastSplit?.pace ?? tracking.avg_pace ?? null;
+
+  return (
+    <>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 1rem 0.5rem" }}>
+        <div
+          style={{
+            background: "#fff",
+            border: `1px solid ${brand.border}`,
+            borderRadius: "16px",
+            padding: "1rem 1.2rem",
+          }}
+        >
+          {/* Pace — Progress wheel — Est. Finish */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            {/* Pace */}
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ fontFamily: brand.font.mono, fontSize: "0.6rem", color: brand.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>
+                Pace
+              </div>
+              <div style={{ fontFamily: brand.font.mono, fontSize: "1.1rem", fontWeight: 700, color: brand.dark }}>
+                {currentPace ? `${currentPace}` : "—"}
+              </div>
+              <div style={{ fontFamily: brand.font.mono, fontSize: "0.55rem", color: brand.muted }}>
+                min/mi
+              </div>
+            </div>
+
+            {/* Progress wheel */}
+            <div style={{ position: "relative", width: 90, height: 90, flexShrink: 0 }}>
+              <svg width="90" height="90" viewBox="0 0 90 90">
+                {/* Background circle */}
+                <circle cx="45" cy="45" r="38" fill="none" stroke={brand.border} strokeWidth="6" />
+                {/* Progress arc */}
+                <circle
+                  cx="45" cy="45" r="38"
+                  fill="none"
+                  stroke={tracking.status === "finished" ? brand.dark : "#22c55e"}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 38}`}
+                  strokeDashoffset={`${2 * Math.PI * 38 * (1 - progressPct / 100)}`}
+                  transform="rotate(-90 45 45)"
+                  style={{ transition: "stroke-dashoffset 2s ease-out" }}
+                />
+              </svg>
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <span style={{ fontFamily: brand.font.mono, fontSize: "1.3rem", fontWeight: 700, color: brand.dark, lineHeight: 1 }}>
+                  {progressPct}
+                </span>
+                <span style={{ fontFamily: brand.font.mono, fontSize: "0.5rem", color: brand.muted, marginTop: "0.1rem" }}>
+                  %
+                </span>
+              </div>
+            </div>
+
+            {/* Est. Finish */}
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ fontFamily: brand.font.mono, fontSize: "0.6rem", color: brand.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>
+                {tracking.status === "finished" ? "Finish" : "Est. Finish"}
+              </div>
+              <div style={{ fontFamily: brand.font.mono, fontSize: "1.1rem", fontWeight: 700, color: brand.dark }}>
+                {estimatedFinish ?? "—"}
+              </div>
+            </div>
+          </div>
+
+          {/* Splits button */}
+          {completedSplits.length > 0 && (
+            <button
+              onClick={() => setShowSplitsModal(true)}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: "0.75rem",
+                padding: "0.5rem",
+                background: brand.bg,
+                border: `1px solid ${brand.border}`,
+                borderRadius: "10px",
+                fontFamily: brand.font.mono,
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                color: brand.muted,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              View splits
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Splits modal */}
+      {showSplitsModal && (
+        <div
+          onClick={() => setShowSplitsModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            animation: "splashIn 0.3s ease-out",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              background: brand.bg,
+              borderRadius: "24px",
+              padding: "1.5rem",
+              boxShadow: "0 12px 48px rgba(0,0,0,0.3)",
+            }}
+          >
+            <h3 style={{ margin: "0 0 1rem", fontFamily: brand.font.display, fontSize: "1.2rem", fontWeight: 400, color: brand.dark, textAlign: "center" }}>
+              {athleteName}&apos;s Splits
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {tracking.splits.map((split) => (
+                <div
+                  key={split.name}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "0.6rem 0.75rem",
+                    background: split.time ? "#fff" : "transparent",
+                    borderRadius: "10px",
+                    opacity: split.time ? 1 : 0.4,
+                  }}
+                >
+                  <span style={{ fontFamily: brand.font.body, fontSize: "0.85rem", fontWeight: 600, color: brand.dark }}>
+                    {split.name}
+                  </span>
+                  <div style={{ textAlign: "right" }}>
+                    {split.time && (
+                      <span style={{ fontFamily: brand.font.mono, fontSize: "0.8rem", fontWeight: 600, color: brand.dark }}>
+                        {split.time}
+                      </span>
+                    )}
+                    {split.pace && (
+                      <span style={{ fontFamily: brand.font.mono, fontSize: "0.7rem", color: brand.muted, marginLeft: "0.5rem" }}>
+                        {split.pace}/mi
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
