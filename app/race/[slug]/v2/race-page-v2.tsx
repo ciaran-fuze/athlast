@@ -1222,7 +1222,7 @@ export function RacePageV2({
             )}
 
             {/* Messages & photos */}
-            <SectionLabel>Good luck</SectionLabel>
+            <SectionLabel>Messages of support</SectionLabel>
             {sortedSupporterMessages.length === 0 && supporterPhotos.length === 0 ? (
               <div
                 style={{
@@ -1310,8 +1310,7 @@ export function RacePageV2({
               </>
             )}
 
-            {/* From the crowd */}
-            <SectionLabel>From the crowd</SectionLabel>
+            <SectionLabel>Messages of support</SectionLabel>
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
@@ -1465,8 +1464,7 @@ export function RacePageV2({
               </button>
             </div>
 
-            {/* Rolling in */}
-            <SectionLabel>Rolling in</SectionLabel>
+            <SectionLabel>Messages of support</SectionLabel>
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
