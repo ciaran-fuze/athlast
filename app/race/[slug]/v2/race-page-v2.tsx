@@ -1427,12 +1427,12 @@ export function RacePageV2({
               </div>
             )}
 
-            {/* Send congratulations */}
-            <div style={{ marginTop: "0.5rem" }}>
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
               <button
-                onClick={() => setInputMode("message")}
+                onClick={() => setInputMode("photo")}
                 style={{
-                  width: "100%",
+                  flex: 1,
                   border: "none",
                   borderRadius: "11px",
                   padding: "0.7rem",
@@ -1444,13 +1444,35 @@ export function RacePageV2({
                   cursor: "pointer",
                 }}
               >
-                Send congratulations
+                Add a photo
+              </button>
+              <button
+                onClick={() => setInputMode("message")}
+                style={{
+                  flex: 1,
+                  border: `1px solid ${brand.border}`,
+                  borderRadius: "11px",
+                  padding: "0.7rem",
+                  fontFamily: brand.font.body,
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  background: "transparent",
+                  color: brand.dark,
+                  cursor: "pointer",
+                }}
+              >
+                Congratulate
               </button>
             </div>
 
             {/* Rolling in */}
             <SectionLabel>Rolling in</SectionLabel>
-            {sortedSupporterMessages.length === 0 ? (
+            <PhotoMasonry
+              photos={supporterPhotos}
+              onPhotoClick={(msg) => setLightboxMsg(msg)}
+              onAddPhoto={() => setInputMode("photo")}
+            />
+            {sortedSupporterMessages.length === 0 && supporterPhotos.length === 0 ? (
               <div
                 style={{
                   fontFamily: brand.font.body,
