@@ -1221,9 +1221,16 @@ export function RacePageV2({
               </>
             )}
 
-            {/* Messages & photos */}
+            {/* Photos */}
+            <PhotoMasonry
+              photos={supporterPhotos}
+              onPhotoClick={(msg) => setLightboxMsg(msg)}
+              onAddPhoto={() => setInputMode("photo")}
+            />
+
+            {/* Messages */}
             <SectionLabel>Messages of support</SectionLabel>
-            {sortedSupporterMessages.length === 0 && supporterPhotos.length === 0 ? (
+            {sortedSupporterMessages.length === 0 ? (
               <div
                 style={{
                   fontFamily: brand.font.body,
@@ -1236,16 +1243,9 @@ export function RacePageV2({
                 No messages yet — be the first!
               </div>
             ) : (
-              <>
-                <PhotoMasonry
-                  photos={supporterPhotos}
-                  onPhotoClick={(msg) => setLightboxMsg(msg)}
-                  onAddPhoto={() => setInputMode("photo")}
-                />
-                {sortedSupporterMessages.map((msg) => (
-                  <SupporterCard key={msg.id} msg={msg} />
-                ))}
-              </>
+              sortedSupporterMessages.map((msg) => (
+                <SupporterCard key={msg.id} msg={msg} />
+              ))
             )}
 
             {/* Action buttons */}
@@ -1310,13 +1310,14 @@ export function RacePageV2({
               </>
             )}
 
-            <SectionLabel>Messages of support</SectionLabel>
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
               onAddPhoto={() => setInputMode("photo")}
             />
-            {sortedSupporterMessages.length === 0 && supporterPhotos.length === 0 ? (
+
+            <SectionLabel>Messages of support</SectionLabel>
+            {sortedSupporterMessages.length === 0 ? (
               <div style={{ textAlign: "center", padding: "1rem 0" }}>
                 <button
                   onClick={() => setInputMode("message")}
@@ -1464,13 +1465,14 @@ export function RacePageV2({
               </button>
             </div>
 
-            <SectionLabel>Messages of support</SectionLabel>
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
               onAddPhoto={() => setInputMode("photo")}
             />
-            {sortedSupporterMessages.length === 0 && supporterPhotos.length === 0 ? (
+
+            <SectionLabel>Messages of support</SectionLabel>
+            {sortedSupporterMessages.length === 0 ? (
               <div
                 style={{
                   fontFamily: brand.font.body,
