@@ -82,20 +82,9 @@ export default async function RacePageV2Route({
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // RTRT.me tracking — map slugs to event + athlete codes
-  const rtrtConfig: Record<string, { event: string; athlete: string }> = {
-    "phil-dublin-half": { event: "TDL-DUBLINHALF-2026", athlete: "RMBRVZJE" },
-  };
-  const rtrt = rtrtConfig[slug];
-  const raceWithTracking = {
-    ...race,
-    rtrt_event_code: rtrt?.event,
-    rtrt_athlete_id: rtrt?.athlete,
-  };
-
   return (
     <RacePageV2
-      race={raceWithTracking}
+      race={race}
       raceAthletes={raceAthletes ?? []}
       initialSplits={initialSplits}
       initialMessages={messages ?? []}
