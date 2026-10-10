@@ -420,19 +420,19 @@ function FloatingMessages({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    function onTouch() {
-      userTouchRef.current = true;
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = setTimeout(() => {
-        userTouchRef.current = false;
-      }, 4000);
-    }
-    el.addEventListener("touchstart", onTouch, { passive: true });
-    el.addEventListener("mousedown", onTouch);
+    function onDown() { userTouchRef.current = true; }
+    function onUp() { userTouchRef.current = false; }
+    el.addEventListener("touchstart", onDown, { passive: true });
+    el.addEventListener("touchend", onUp, { passive: true });
+    el.addEventListener("mousedown", onDown);
+    el.addEventListener("mouseup", onUp);
+    el.addEventListener("mouseleave", onUp);
     return () => {
-      el.removeEventListener("touchstart", onTouch);
-      el.removeEventListener("mousedown", onTouch);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      el.removeEventListener("touchstart", onDown);
+      el.removeEventListener("touchend", onUp);
+      el.removeEventListener("mousedown", onDown);
+      el.removeEventListener("mouseup", onUp);
+      el.removeEventListener("mouseleave", onUp);
     };
   }, []);
 
@@ -460,17 +460,45 @@ function FloatingMessages({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      style={{
-        overflowX: "auto",
-        overflowY: "hidden",
-        WebkitOverflowScrolling: "touch",
-        margin: "0 -1.25rem",
-        padding: "0 0 0.5rem",
-        scrollbarWidth: "none",
-      }}
-    >
+    <div style={{ position: "relative", margin: "0 -1.25rem" }}>
+      {/* Right fade hint */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 40,
+          background: `linear-gradient(to right, transparent, ${brand.bg})`,
+          zIndex: 2,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Message count */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 8,
+          right: 8,
+          fontFamily: brand.font.mono,
+          fontSize: "0.55rem",
+          color: brand.muted,
+          zIndex: 3,
+          letterSpacing: "0.05em",
+        }}
+      >
+        {messages.length} messages
+      </div>
+      <div
+        ref={scrollRef}
+        style={{
+          overflowX: "auto",
+          overflowY: "hidden",
+          WebkitOverflowScrolling: "touch",
+          padding: "0 0 0.5rem",
+          scrollbarWidth: "none",
+        }}
+      >
       <div
         style={{
           position: "relative",
@@ -557,6 +585,7 @@ function FloatingMessages({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
