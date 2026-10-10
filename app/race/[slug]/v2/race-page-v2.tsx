@@ -357,6 +357,53 @@ function SupporterCard({ msg }: { msg: Message }) {
   );
 }
 
+// --- Action Buttons ---
+
+function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
+  const btnStyle: React.CSSProperties = {
+    flex: 1,
+    border: `1px solid ${brand.border}`,
+    borderRadius: "11px",
+    padding: "0.6rem 0.25rem",
+    fontFamily: brand.font.body,
+    fontSize: "0.7rem",
+    fontWeight: 500,
+    background: "transparent",
+    color: brand.dark,
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "0.3rem",
+  };
+
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+      <button onClick={onSelfie} style={btnStyle}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        Selfie
+      </button>
+      <button onClick={onGallery} style={btnStyle}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+        Gallery
+      </button>
+      <button onClick={onMessage} style={btnStyle}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        Message
+      </button>
+    </div>
+  );
+}
+
 // --- Floating Messages ---
 
 function FloatingMessages({
@@ -1202,7 +1249,7 @@ export function RacePageV2({
   const [selectedAthlete] = useState(raceAthletes[0]?.athlete_id ?? "");
 
   // Input & modal state
-  const [inputMode, setInputMode] = useState<"photo" | "message" | null>(null);
+  const [inputMode, setInputMode] = useState<"selfie" | "gallery" | "message" | null>(null);
   const [lightboxMsg, setLightboxMsg] = useState<Message | null>(null);
   const [showSplits, setShowSplits] = useState(false);
 
@@ -1471,7 +1518,7 @@ export function RacePageV2({
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("photo")}
+              onAddPhoto={() => setInputMode("gallery")}
             />
 
             {/* Messages */}
@@ -1482,43 +1529,11 @@ export function RacePageV2({
               onBubbleTap={(msg) => setLightboxMsg(msg)}
             />
 
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <button
-                onClick={() => setInputMode("photo")}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: brand.dark,
-                  color: "#F3ECDD",
-                  cursor: "pointer",
-                }}
-              >
-                Add a photo
-              </button>
-              <button
-                onClick={() => setInputMode("message")}
-                style={{
-                  flex: 1,
-                  border: `1px solid ${brand.border}`,
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: "transparent",
-                  color: brand.dark,
-                  cursor: "pointer",
-                }}
-              >
-                Message
-              </button>
-            </div>
+            <ActionButtons
+              onSelfie={() => setInputMode("selfie")}
+              onGallery={() => setInputMode("gallery")}
+              onMessage={() => setInputMode("message")}
+            />
           </>
         )}
 
@@ -1547,7 +1562,7 @@ export function RacePageV2({
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("photo")}
+              onAddPhoto={() => setInputMode("gallery")}
             />
 
             <SectionLabel>Messages of support</SectionLabel>
@@ -1557,43 +1572,11 @@ export function RacePageV2({
               onBubbleTap={(msg) => setLightboxMsg(msg)}
             />
 
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <button
-                onClick={() => setInputMode("photo")}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: brand.dark,
-                  color: "#F3ECDD",
-                  cursor: "pointer",
-                }}
-              >
-                Add a photo
-              </button>
-              <button
-                onClick={() => setInputMode("message")}
-                style={{
-                  flex: 1,
-                  border: `1px solid ${brand.border}`,
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: "transparent",
-                  color: brand.dark,
-                  cursor: "pointer",
-                }}
-              >
-                Message
-              </button>
-            </div>
+            <ActionButtons
+              onSelfie={() => setInputMode("selfie")}
+              onGallery={() => setInputMode("gallery")}
+              onMessage={() => setInputMode("message")}
+            />
 
             {/* Splits button */}
             {completedSplits.length > 0 && (
@@ -1642,48 +1625,16 @@ export function RacePageV2({
               </div>
             )}
 
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <button
-                onClick={() => setInputMode("photo")}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: brand.dark,
-                  color: "#F3ECDD",
-                  cursor: "pointer",
-                }}
-              >
-                Add a photo
-              </button>
-              <button
-                onClick={() => setInputMode("message")}
-                style={{
-                  flex: 1,
-                  border: `1px solid ${brand.border}`,
-                  borderRadius: "11px",
-                  padding: "0.7rem",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  fontWeight: 500,
-                  background: "transparent",
-                  color: brand.dark,
-                  cursor: "pointer",
-                }}
-              >
-                Congratulate
-              </button>
-            </div>
+            <ActionButtons
+              onSelfie={() => setInputMode("selfie")}
+              onGallery={() => setInputMode("gallery")}
+              onMessage={() => setInputMode("message")}
+            />
 
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("photo")}
+              onAddPhoto={() => setInputMode("gallery")}
             />
 
             <SectionLabel>Messages of support</SectionLabel>
@@ -1973,7 +1924,7 @@ export function RacePageV2({
                 textAlign: "center",
               }}
             >
-              {inputMode === "photo" ? "Share a photo" : race.status === "finished" ? "Send congratulations" : "Send a message"}
+              {inputMode === "selfie" ? "Take a selfie" : inputMode === "gallery" ? "Choose from gallery" : race.status === "finished" ? "Send congratulations" : "Send a message"}
             </h3>
             <MessageInput
               raceId={race.id}
@@ -1984,7 +1935,7 @@ export function RacePageV2({
                 pollMessages();
                 setInputMode(null);
               }}
-              autoFocusPhoto={inputMode === "photo"}
+              captureMode={inputMode === "selfie" ? "user" : inputMode === "gallery" ? "gallery" : undefined}
             />
           </div>
         </div>
@@ -2112,15 +2063,16 @@ function MessageInput({
   athleteName,
   athleteKm,
   onSent,
-  autoFocusPhoto,
+  captureMode,
 }: {
   raceId: string;
   athleteId: string;
   athleteName: string;
   athleteKm: number | null;
   onSent: () => void;
-  autoFocusPhoto?: boolean;
+  captureMode?: "user" | "gallery";
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("athlast_name") || "";
     return "";
@@ -2133,6 +2085,13 @@ function MessageInput({
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+
+  // Auto-open file picker for selfie/gallery modes
+  useEffect(() => {
+    if (captureMode && fileInputRef.current) {
+      setTimeout(() => fileInputRef.current?.click(), 100);
+    }
+  }, [captureMode]);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
@@ -2315,8 +2274,10 @@ function MessageInput({
             }}
           >
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
+              {...(captureMode === "user" ? { capture: "user" } : {})}
               onChange={handlePhotoChange}
               style={{ display: "none" }}
             />
