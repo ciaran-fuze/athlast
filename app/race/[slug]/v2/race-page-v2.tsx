@@ -357,6 +357,189 @@ function SupporterCard({ msg }: { msg: Message }) {
   );
 }
 
+// --- Floating Messages ---
+
+function FloatingMessages({
+  messages,
+  onSendMessage,
+}: {
+  messages: Message[];
+  onSendMessage: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const BUBBLE_SPACE = 190;
+  const PADDING = 30;
+  const fieldWidth = PADDING + Math.max(messages.length * BUBBLE_SPACE, 350) + PADDING;
+
+  const bubbleX = messages.map((_, i) => {
+    const base = PADDING + (i / Math.max(messages.length - 1, 1)) * (fieldWidth - PADDING * 2 - 180) + 90;
+    const jitter = ((i * 11 + 5) % 9 - 4) * 5;
+    return base + jitter;
+  });
+
+  const bubbleY: number[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    let h = (i + 1) * 2654435761;
+    h = ((h >> 16) ^ h) & 0xffff;
+    let y = 8 + (h % 160);
+    if (i > 0 && Math.abs(y - bubbleY[i - 1]) < 70) {
+      y = (bubbleY[i - 1] + 100) % 160 + 8;
+    }
+    bubbleY.push(y);
+  }
+
+  // Auto-scroll to right on mount
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTo({ left: el.scrollWidth, behavior: "instant" });
+    });
+  }, [messages.length]);
+
+  // Auto-scroll back after 5s idle
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function resetIdle() {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        el?.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+      }, 5000);
+    }
+    el.addEventListener("scroll", resetIdle, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", resetIdle);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
+
+  if (messages.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "1rem 0" }}>
+        <button
+          onClick={onSendMessage}
+          style={{
+            padding: "0.7rem 1.3rem",
+            background: brand.dark,
+            color: "#F3ECDD",
+            border: "none",
+            borderRadius: "11px",
+            fontFamily: brand.font.body,
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Send the first message
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      style={{
+        overflowX: "auto",
+        overflowY: "hidden",
+        WebkitOverflowScrolling: "touch",
+        margin: "0 -1.25rem",
+        padding: "0 0 0.5rem",
+        scrollbarWidth: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: fieldWidth,
+          height: 240,
+        }}
+      >
+        {messages.map((msg, i) => {
+          const floatDur = 3.5 + (i % 3);
+          const floatDel = (i * 0.7) % 2.5;
+          const rotate = ((i * 7 + 3) % 7) - 3;
+
+          return (
+            <div
+              key={msg.id}
+              style={{
+                position: "absolute",
+                left: bubbleX[i],
+                top: bubbleY[i],
+                width: 180,
+                transform: `rotate(${rotate}deg)`,
+                transformOrigin: "center center",
+              }}
+            >
+              <div
+                style={{
+                  background: brand.card,
+                  borderRadius: "14px",
+                  padding: "0.75rem 0.85rem",
+                  boxShadow:
+                    "4px 4px 12px rgba(26,26,24,0.06), -2px -2px 8px rgba(255,255,255,0.7)",
+                  border: `1px solid ${brand.border}`,
+                  animation: `float ${floatDur}s ease-in-out ${floatDel}s infinite`,
+                }}
+              >
+                {msg.message && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontFamily: brand.font.body,
+                      fontSize: "0.85rem",
+                      lineHeight: 1.4,
+                      color: brand.dark,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {msg.message}
+                  </p>
+                )}
+                <div
+                  style={{
+                    marginTop: "0.35rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: brand.font.body,
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: brand.dark,
+                    }}
+                  >
+                    {msg.sender_name}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: brand.font.mono,
+                      fontSize: "0.55rem",
+                      color: brand.muted,
+                    }}
+                  >
+                    {timeAgo(msg.created_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // --- Photo Masonry Grid ---
 
 function PhotoMasonry({
@@ -1127,6 +1310,10 @@ export function RacePageV2({
           0% { opacity: 0; transform: translateY(12px); }
           100% { opacity: 1; transform: translateY(0); }
         }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
       `}</style>
 
       {/* ─── Header ─── */}
@@ -1238,23 +1425,10 @@ export function RacePageV2({
 
             {/* Messages */}
             <SectionLabel>Messages of support</SectionLabel>
-            {sortedSupporterMessages.length === 0 ? (
-              <div
-                style={{
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  color: brand.muted,
-                  fontStyle: "italic",
-                  padding: "0.5rem 0",
-                }}
-              >
-                No messages yet — be the first!
-              </div>
-            ) : (
-              sortedSupporterMessages.map((msg) => (
-                <SupporterCard key={msg.id} msg={msg} />
-              ))
-            )}
+            <FloatingMessages
+              messages={sortedSupporterMessages}
+              onSendMessage={() => setInputMode("message")}
+            />
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
@@ -1325,30 +1499,10 @@ export function RacePageV2({
             />
 
             <SectionLabel>Messages of support</SectionLabel>
-            {sortedSupporterMessages.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "1rem 0" }}>
-                <button
-                  onClick={() => setInputMode("message")}
-                  style={{
-                    padding: "0.7rem 1.3rem",
-                    background: brand.dark,
-                    color: "#F3ECDD",
-                    border: "none",
-                    borderRadius: "11px",
-                    fontFamily: brand.font.body,
-                    fontSize: "0.85rem",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Send a message
-                </button>
-              </div>
-            ) : (
-              sortedSupporterMessages.map((msg) => (
-                <SupporterCard key={msg.id} msg={msg} />
-              ))
-            )}
+            <FloatingMessages
+              messages={sortedSupporterMessages}
+              onSendMessage={() => setInputMode("message")}
+            />
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
@@ -1480,28 +1634,10 @@ export function RacePageV2({
             />
 
             <SectionLabel>Messages of support</SectionLabel>
-            {sortedSupporterMessages.length === 0 ? (
-              <div
-                style={{
-                  fontFamily: brand.font.body,
-                  fontSize: "0.85rem",
-                  color: brand.muted,
-                  fontStyle: "italic",
-                  padding: "0.5rem 0",
-                }}
-              >
-                No messages yet — be the first to congratulate!
-              </div>
-            ) : (
-              sortedSupporterMessages.map((msg, i) => (
-                <div
-                  key={msg.id}
-                  style={{ animation: `fadeInUp 0.4s ease-out ${i * 0.06}s both` }}
-                >
-                  <SupporterCard msg={msg} />
-                </div>
-              ))
-            )}
+            <FloatingMessages
+              messages={sortedSupporterMessages}
+              onSendMessage={() => setInputMode("message")}
+            />
 
             {/* Splits */}
             {completedSplits.length > 0 && (
