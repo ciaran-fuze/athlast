@@ -418,7 +418,7 @@ function FloatingMessages({
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number | null>(null);
   const userTouchRef = useRef(false);
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollPos = useRef(0);
 
   const BUBBLE_SPACE = 190;
   const PADDING = 30;
@@ -441,19 +441,22 @@ function FloatingMessages({
     bubbleY.push(y);
   }
 
-  // Slow continuous auto-scroll
+  // Slow continuous auto-scroll with sub-pixel accumulator
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const speed = 0.3; // px per frame
+    const speed = 0.5;
 
     function tick() {
       if (!userTouchRef.current && el) {
-        el.scrollLeft += speed;
-        // Loop back when reaching the end
-        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
-          el.scrollLeft = 0;
+        scrollPos.current += speed;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (maxScroll > 0 && scrollPos.current >= maxScroll) {
+          scrollPos.current = 0;
         }
+        el.scrollLeft = scrollPos.current;
+      } else if (el) {
+        scrollPos.current = el.scrollLeft;
       }
       animRef.current = requestAnimationFrame(tick);
     }
@@ -463,7 +466,7 @@ function FloatingMessages({
     };
   }, [messages.length]);
 
-  // Pause auto-scroll on touch, resume after 4s idle
+  // Pause auto-scroll on touch, resume on release
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -507,7 +510,7 @@ function FloatingMessages({
   }
 
   return (
-    <div style={{ position: "relative", margin: "0 -1.25rem" }}>
+    <div style={{ position: "relative", margin: "0 -1.25rem", height: 260 }}>
       {/* Right fade hint */}
       <div
         style={{
@@ -525,7 +528,7 @@ function FloatingMessages({
       <div
         style={{
           position: "absolute",
-          bottom: 8,
+          bottom: 4,
           right: 8,
           fontFamily: brand.font.mono,
           fontSize: "0.55rem",
@@ -538,21 +541,23 @@ function FloatingMessages({
       </div>
       <div
         ref={scrollRef}
+        className="floating-scroll"
         style={{
-          overflowX: "auto",
+          position: "absolute",
+          inset: 0,
+          overflowX: "scroll",
           overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
-          padding: "0 0 0.5rem",
           scrollbarWidth: "none",
         }}
       >
-      <div
-        style={{
-          position: "relative",
-          width: fieldWidth,
-          height: 240,
-        }}
-      >
+        <div
+          style={{
+            position: "relative",
+            width: fieldWidth,
+            height: "100%",
+          }}
+        >
         {messages.map((msg, i) => {
           const floatDur = 3.5 + (i % 3);
           const floatDel = (i * 0.7) % 2.5;
@@ -1429,6 +1434,7 @@ export function RacePageV2({
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-8px); }
         }
+        .floating-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* ─── Header ─── */}
@@ -1701,7 +1707,7 @@ export function RacePageV2({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*"
         onChange={handleFileCapture}
         style={{ display: "none" }}
       />
