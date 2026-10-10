@@ -1250,8 +1250,25 @@ export function RacePageV2({
 
   // Input & modal state
   const [inputMode, setInputMode] = useState<"selfie" | "gallery" | "message" | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [lightboxMsg, setLightboxMsg] = useState<Message | null>(null);
   const [showSplits, setShowSplits] = useState(false);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPendingPreview(reader.result as string);
+      setInputMode("gallery"); // open modal with file pre-loaded
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // reset so same file can be re-selected
+  }
 
   // Splash for new messages
   const [splashMsg, setSplashMsg] = useState<Message | null>(null);
@@ -1518,7 +1535,7 @@ export function RacePageV2({
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("gallery")}
+              onAddPhoto={() => galleryInputRef.current?.click()}
             />
 
             {/* Messages */}
@@ -1530,8 +1547,8 @@ export function RacePageV2({
             />
 
             <ActionButtons
-              onSelfie={() => setInputMode("selfie")}
-              onGallery={() => setInputMode("gallery")}
+              onSelfie={() => selfieInputRef.current?.click()}
+              onGallery={() => galleryInputRef.current?.click()}
               onMessage={() => setInputMode("message")}
             />
           </>
@@ -1562,7 +1579,7 @@ export function RacePageV2({
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("gallery")}
+              onAddPhoto={() => galleryInputRef.current?.click()}
             />
 
             <SectionLabel>Messages of support</SectionLabel>
@@ -1573,8 +1590,8 @@ export function RacePageV2({
             />
 
             <ActionButtons
-              onSelfie={() => setInputMode("selfie")}
-              onGallery={() => setInputMode("gallery")}
+              onSelfie={() => selfieInputRef.current?.click()}
+              onGallery={() => galleryInputRef.current?.click()}
               onMessage={() => setInputMode("message")}
             />
 
@@ -1626,15 +1643,15 @@ export function RacePageV2({
             )}
 
             <ActionButtons
-              onSelfie={() => setInputMode("selfie")}
-              onGallery={() => setInputMode("gallery")}
+              onSelfie={() => selfieInputRef.current?.click()}
+              onGallery={() => galleryInputRef.current?.click()}
               onMessage={() => setInputMode("message")}
             />
 
             <PhotoMasonry
               photos={supporterPhotos}
               onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => setInputMode("gallery")}
+              onAddPhoto={() => galleryInputRef.current?.click()}
             />
 
             <SectionLabel>Messages of support</SectionLabel>
@@ -1671,6 +1688,23 @@ export function RacePageV2({
           </>
         )}
       </div>
+
+      {/* Hidden file inputs — triggered directly, no modal flash */}
+      <input
+        ref={selfieInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        onChange={handleFileCapture}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*,video/*"
+        onChange={handleFileCapture}
+        style={{ display: "none" }}
+      />
 
       {/* ─── Modals ─── */}
 
@@ -1887,10 +1921,10 @@ export function RacePageV2({
         </div>
       )}
 
-      {/* Input modal */}
-      {inputMode && (
+      {/* Input modal — message only, or file pre-loaded from selfie/gallery */}
+      {(inputMode === "message" || inputMode === "gallery") && (
         <div
-          onClick={() => setInputMode(null)}
+          onClick={() => { setInputMode(null); setPendingFile(null); setPendingPreview(null); }}
           style={{
             position: "fixed",
             inset: 0,
@@ -1924,7 +1958,7 @@ export function RacePageV2({
                 textAlign: "center",
               }}
             >
-              {inputMode === "selfie" ? "Take a selfie" : inputMode === "gallery" ? "Choose from gallery" : race.status === "finished" ? "Send congratulations" : "Send a message"}
+              {pendingFile ? "Add a caption" : race.status === "finished" ? "Send congratulations" : "Send a message"}
             </h3>
             <MessageInput
               raceId={race.id}
@@ -1934,8 +1968,11 @@ export function RacePageV2({
               onSent={() => {
                 pollMessages();
                 setInputMode(null);
+                setPendingFile(null);
+                setPendingPreview(null);
               }}
-              captureMode={inputMode === "selfie" ? "user" : inputMode === "gallery" ? "gallery" : undefined}
+              initialFile={pendingFile}
+              initialPreview={pendingPreview}
             />
           </div>
         </div>
@@ -2063,16 +2100,17 @@ function MessageInput({
   athleteName,
   athleteKm,
   onSent,
-  captureMode,
+  initialFile,
+  initialPreview,
 }: {
   raceId: string;
   athleteId: string;
   athleteName: string;
   athleteKm: number | null;
   onSent: () => void;
-  captureMode?: "user" | "gallery";
+  initialFile?: File | null;
+  initialPreview?: string | null;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("athlast_name") || "";
     return "";
@@ -2082,28 +2120,9 @@ function MessageInput({
     return false;
   });
   const [message, setMessage] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<File | null>(initialFile ?? null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialPreview ?? null);
   const [sending, setSending] = useState(false);
-
-  // Auto-open file picker for selfie/gallery modes
-  useEffect(() => {
-    if (captureMode && fileInputRef.current) {
-      setTimeout(() => fileInputRef.current?.click(), 100);
-    }
-  }, [captureMode]);
-
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    setPhoto(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setPhotoPreview(null);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -2241,7 +2260,7 @@ function MessageInput({
           </div>
         )}
         <textarea
-          placeholder={`Send ${athleteName || "the athlete"} some support...`}
+          placeholder={photo ? "Add a caption (optional)..." : `Send ${athleteName || "the athlete"} some support...`}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={3}
@@ -2260,42 +2279,6 @@ function MessageInput({
           }}
         />
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-          <label
-            style={{
-              width: 40,
-              height: 40,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flexShrink: 0,
-              borderRadius: "50%",
-              border: `1px solid ${brand.border}`,
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              {...(captureMode === "user" ? { capture: "user" } : {})}
-              onChange={handlePhotoChange}
-              style={{ display: "none" }}
-            />
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={brand.muted}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21 15 16 10 5 21" />
-            </svg>
-          </label>
           <button
             type="submit"
             disabled={sending}
