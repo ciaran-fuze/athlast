@@ -362,11 +362,15 @@ function SupporterCard({ msg }: { msg: Message }) {
 function FloatingMessages({
   messages,
   onSendMessage,
+  onBubbleTap,
 }: {
   messages: Message[];
   onSendMessage: () => void;
+  onBubbleTap: (msg: Message) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<number | null>(null);
+  const userTouchRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const BUBBLE_SPACE = 190;
@@ -390,28 +394,44 @@ function FloatingMessages({
     bubbleY.push(y);
   }
 
-  // Auto-scroll to right on mount
+  // Slow continuous auto-scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollTo({ left: el.scrollWidth, behavior: "instant" });
-    });
+    const speed = 0.3; // px per frame
+
+    function tick() {
+      if (!userTouchRef.current && el) {
+        el.scrollLeft += speed;
+        // Loop back when reaching the end
+        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+          el.scrollLeft = 0;
+        }
+      }
+      animRef.current = requestAnimationFrame(tick);
+    }
+    animRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
   }, [messages.length]);
 
-  // Auto-scroll back after 5s idle
+  // Pause auto-scroll on touch, resume after 4s idle
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    function resetIdle() {
+    function onTouch() {
+      userTouchRef.current = true;
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
-        el?.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
-      }, 5000);
+        userTouchRef.current = false;
+      }, 4000);
     }
-    el.addEventListener("scroll", resetIdle, { passive: true });
+    el.addEventListener("touchstart", onTouch, { passive: true });
+    el.addEventListener("mousedown", onTouch);
     return () => {
-      el.removeEventListener("scroll", resetIdle);
+      el.removeEventListener("touchstart", onTouch);
+      el.removeEventListener("mousedown", onTouch);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, []);
@@ -466,6 +486,7 @@ function FloatingMessages({
           return (
             <div
               key={msg.id}
+              onClick={() => onBubbleTap(msg)}
               style={{
                 position: "absolute",
                 left: bubbleX[i],
@@ -473,6 +494,7 @@ function FloatingMessages({
                 width: 180,
                 transform: `rotate(${rotate}deg)`,
                 transformOrigin: "center center",
+                cursor: "pointer",
               }}
             >
               <div
@@ -1428,6 +1450,7 @@ export function RacePageV2({
             <FloatingMessages
               messages={sortedSupporterMessages}
               onSendMessage={() => setInputMode("message")}
+              onBubbleTap={(msg) => setLightboxMsg(msg)}
             />
 
             {/* Action buttons */}
@@ -1502,6 +1525,7 @@ export function RacePageV2({
             <FloatingMessages
               messages={sortedSupporterMessages}
               onSendMessage={() => setInputMode("message")}
+              onBubbleTap={(msg) => setLightboxMsg(msg)}
             />
 
             {/* Action buttons */}
@@ -1637,6 +1661,7 @@ export function RacePageV2({
             <FloatingMessages
               messages={sortedSupporterMessages}
               onSendMessage={() => setInputMode("message")}
+              onBubbleTap={(msg) => setLightboxMsg(msg)}
             />
 
             {/* Splits */}
