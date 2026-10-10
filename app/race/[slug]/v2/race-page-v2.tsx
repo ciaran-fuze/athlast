@@ -109,6 +109,10 @@ function formatTimeShort(dateString: string): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function isVideo(url: string): boolean {
+  return /\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url);
+}
+
 // --- Section Label ---
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -388,7 +392,11 @@ function PhotoMasonry({
           boxShadow: "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)",
         }}
       >
-        <img src={msg.photo_url!} alt="" style={{ width: "100%", display: "block" }} />
+        {isVideo(msg.photo_url!) ? (
+          <video src={msg.photo_url!} style={{ width: "100%", display: "block" }} muted playsInline autoPlay loop />
+        ) : (
+          <img src={msg.photo_url!} alt="" style={{ width: "100%", display: "block" }} />
+        )}
         <div
           style={{
             position: "absolute",
@@ -1585,17 +1593,33 @@ export function RacePageV2({
             }}
           >
             {splashMsg.photo_url && (
-              <img
-                src={splashMsg.photo_url}
-                alt=""
-                onLoad={() => setSplashReady(true)}
-                style={{
-                  width: "100%",
-                  borderRadius: "14px",
-                  marginBottom: "1rem",
-                  display: "block",
-                }}
-              />
+              isVideo(splashMsg.photo_url) ? (
+                <video
+                  src={splashMsg.photo_url}
+                  onLoadedData={() => setSplashReady(true)}
+                  style={{
+                    width: "100%",
+                    borderRadius: "14px",
+                    marginBottom: "1rem",
+                    display: "block",
+                  }}
+                  muted
+                  playsInline
+                  autoPlay
+                />
+              ) : (
+                <img
+                  src={splashMsg.photo_url}
+                  alt=""
+                  onLoad={() => setSplashReady(true)}
+                  style={{
+                    width: "100%",
+                    borderRadius: "14px",
+                    marginBottom: "1rem",
+                    display: "block",
+                  }}
+                />
+              )
             )}
             {splashMsg.message && (
               <p
@@ -1795,16 +1819,31 @@ export function RacePageV2({
         >
           {lightboxMsg.photo_url ? (
             <>
-              <img
-                src={lightboxMsg.photo_url}
-                alt=""
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "75vh",
-                  borderRadius: "12px",
-                  display: "block",
-                }}
-              />
+              {isVideo(lightboxMsg.photo_url) ? (
+                <video
+                  src={lightboxMsg.photo_url}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "75vh",
+                    borderRadius: "12px",
+                    display: "block",
+                  }}
+                  controls
+                  playsInline
+                  autoPlay
+                />
+              ) : (
+                <img
+                  src={lightboxMsg.photo_url}
+                  alt=""
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "75vh",
+                    borderRadius: "12px",
+                    display: "block",
+                  }}
+                />
+              )}
               <div style={{ marginTop: "1rem", textAlign: "center" }}>
                 <span
                   style={{
@@ -1998,16 +2037,32 @@ function MessageInput({
         )}
         {photoPreview && (
           <div style={{ position: "relative", display: "inline-block" }}>
-            <img
-              src={photoPreview}
-              alt="Preview"
-              style={{
-                maxWidth: "100%",
-                maxHeight: 120,
-                borderRadius: "8px",
-                display: "block",
-              }}
-            />
+            {photo?.type.startsWith("video/") ? (
+              <video
+                src={photoPreview}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: 120,
+                  borderRadius: "8px",
+                  display: "block",
+                }}
+                muted
+                playsInline
+                autoPlay
+                loop
+              />
+            ) : (
+              <img
+                src={photoPreview}
+                alt="Preview"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: 120,
+                  borderRadius: "8px",
+                  display: "block",
+                }}
+              />
+            )}
             <button
               type="button"
               onClick={() => {
@@ -2071,8 +2126,7 @@ function MessageInput({
           >
             <input
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/*,video/*"
               onChange={handlePhotoChange}
               style={{ display: "none" }}
             />
