@@ -76,13 +76,6 @@ function parseTimeToSeconds(t: string): number {
   return 0;
 }
 
-function formatSeconds(s: number): string {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = Math.floor(s % 60);
-  return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-}
-
 function splitNameToKm(name: string, raceDistanceKm: number): number | null {
   if (name === "Startline" || name === "Start") return 0;
   if (name === "Finishline" || name === "Finish") return raceDistanceKm;
@@ -162,20 +155,20 @@ function BigCountdown({ raceDate }: { raceDate: string }) {
 
   const numStyle: React.CSSProperties = {
     fontFamily: brand.font.display,
-    fontSize: "2.8rem",
+    fontSize: "2rem",
     fontWeight: 600,
     color: brand.dark,
     lineHeight: 1,
     fontVariantNumeric: "tabular-nums",
-    minWidth: "3.5rem",
+    minWidth: "2.6rem",
     textAlign: "center",
   };
 
   const sepStyle: React.CSSProperties = {
     fontFamily: brand.font.display,
-    fontSize: "2rem",
+    fontSize: "1.5rem",
     color: brand.border,
-    padding: "0 0.3rem",
+    padding: "0 0.25rem",
     alignSelf: "flex-start",
     marginTop: "0.2rem",
   };
@@ -208,9 +201,9 @@ function BigCountdown({ raceDate }: { raceDate: string }) {
       <div
         style={{
           textAlign: "center",
-          marginTop: "0.6rem",
+          marginTop: "0.3rem",
           fontFamily: brand.font.body,
-          fontSize: "0.85rem",
+          fontSize: "0.8rem",
           color: brand.muted,
         }}
       >
@@ -293,31 +286,6 @@ function StatusPill({ race, estimatedKm }: { race: Race; estimatedKm: number | n
   );
 }
 
-// --- Goal Badge ---
-
-function GoalBadge({ goalTime }: { goalTime: string }) {
-  const parts = goalTime.split(":");
-  const display = parts.length === 3 && parts[2] === "00"
-    ? `${parts[0]}:${parts[1]}`
-    : goalTime;
-
-  return (
-    <span
-      style={{
-        fontFamily: brand.font.mono,
-        fontSize: "0.65rem",
-        color: brand.dark,
-        border: `1px solid ${brand.border}`,
-        borderRadius: "8px",
-        padding: "0.2rem 0.5rem",
-        marginLeft: "auto",
-      }}
-    >
-      GOAL&nbsp;{display}
-    </span>
-  );
-}
-
 // --- Supporter Card ---
 
 function SupporterCard({ msg }: { msg: Message }) {
@@ -378,31 +346,126 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
   };
 
   return (
-    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-      <button onClick={onSelfie} style={btnStyle}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-        Selfie
-      </button>
-      <button onClick={onGallery} style={btnStyle}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-        Gallery
-      </button>
-      <button onClick={onMessage} style={btnStyle}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        Message
-      </button>
-    </div>
+    <>
+      <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+        <button onClick={onSelfie} style={btnStyle}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          Selfie
+        </button>
+        <button onClick={onGallery} style={btnStyle}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          Gallery
+        </button>
+        <button onClick={onMessage} style={btnStyle}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          Message
+        </button>
+      </div>
+    </>
   );
 }
+
+// --- Floating Add Button ---
+
+function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  const items: { label: string; onClick: () => void }[] = [
+    { label: "Message", onClick: onMessage },
+    { label: "Gallery", onClick: onGallery },
+    { label: "Selfie", onClick: onSelfie },
+  ];
+
+  return (
+    <>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 89, background: "rgba(26,26,24,0.25)" }}
+        />
+      )}
+      <div
+        style={{
+          position: "fixed",
+          right: "max(1rem, calc(50vw - 240px + 1rem))",
+          bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+          zIndex: 90,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          gap: "0.5rem",
+        }}
+      >
+        {open &&
+          items.map((item, i) => (
+            <button
+              key={item.label}
+              onClick={() => {
+                setOpen(false);
+                item.onClick();
+              }}
+              style={{
+                padding: "0.55rem 1rem",
+                background: brand.card,
+                color: brand.dark,
+                border: `1px solid ${brand.border}`,
+                borderRadius: "20px",
+                fontFamily: brand.font.body,
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(26,26,24,0.15)",
+                animation: `fadeInUp 0.2s ease-out ${(items.length - 1 - i) * 0.04}s both`,
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        <button
+          aria-label={open ? "Close" : "Add support"}
+          onClick={() => setOpen((o) => !o)}
+          style={{
+            width: 54,
+            height: 54,
+            borderRadius: "50%",
+            background: brand.dark,
+            color: "#F3ECDD",
+            border: "none",
+            cursor: "pointer",
+            boxShadow: "0 6px 20px rgba(26,26,24,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={{ transform: open ? "rotate(45deg)" : "none", transition: "transform 0.2s ease-out" }}
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      </div>
+    </>
+  );
+}
+
 
 // --- Floating Messages ---
 
@@ -465,6 +528,13 @@ function FloatingMessages({
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
   }, [messages.length]);
+
+  // When a new message lands at the front, jump back so it's front and centre
+  const frontId = messages[0]?.id;
+  useEffect(() => {
+    scrollPos.current = 0;
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+  }, [frontId]);
 
   // Pause auto-scroll on touch, resume on release
   useEffect(() => {
@@ -529,7 +599,7 @@ function FloatingMessages({
         style={{
           position: "absolute",
           bottom: 4,
-          right: 8,
+          left: "1.25rem",
           fontFamily: brand.font.mono,
           fontSize: "0.55rem",
           color: brand.muted,
@@ -643,9 +713,9 @@ function FloatingMessages({
   );
 }
 
-// --- Photo Masonry Grid ---
+// --- Photo Grid ---
 
-function PhotoMasonry({
+function PhotoGrid({
   photos,
   onPhotoClick,
   onAddPhoto,
@@ -654,200 +724,128 @@ function PhotoMasonry({
   onPhotoClick: (msg: Message) => void;
   onAddPhoto: () => void;
 }) {
+  const [showAll, setShowAll] = useState(false);
   if (photos.length === 0) return null;
 
-  const col1: Message[] = [];
-  const col2: Message[] = [];
-  photos.forEach((msg, i) => (i % 2 === 0 ? col1 : col2).push(msg));
+  // Two rows (7 photos + add tile); beyond that a "+N" tile reveals the rest
+  const MAX_COLLAPSED = 7;
+  const overflow = showAll ? 0 : Math.max(0, photos.length - MAX_COLLAPSED + 1);
+  const visible = overflow > 0 ? photos.slice(0, MAX_COLLAPSED - 1) : photos;
 
-  const renderPhoto = (msg: Message, i: number) => (
+  const tileStyle: React.CSSProperties = {
+    position: "relative",
+    aspectRatio: "1 / 1",
+    borderRadius: "10px",
+    overflow: "hidden",
+    cursor: "pointer",
+  };
+
+  return (
     <div
-      key={msg.id}
       style={{
-        marginBottom: "0.75rem",
-        cursor: "pointer",
-        animation: `fadeInUp 0.4s ease-out ${i * 0.06}s both`,
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: "0.4rem",
+        marginTop: "0.75rem",
       }}
     >
-      <div
-        onClick={() => onPhotoClick(msg)}
-        style={{
-          position: "relative",
-          borderRadius: "12px",
-          overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(26,26,24,0.08), 0 8px 24px rgba(26,26,24,0.1)",
-        }}
-      >
-        {isVideo(msg.photo_url!) ? (
-          <video src={msg.photo_url!} style={{ width: "100%", display: "block" }} muted playsInline autoPlay loop />
-        ) : (
-          <img src={msg.photo_url!} alt="" style={{ width: "100%", display: "block" }} />
-        )}
+      {visible.map((msg, i) => (
         <div
+          key={msg.id}
+          onClick={() => onPhotoClick(msg)}
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: "0.5rem 0.6rem",
-            background: "rgba(0,0,0,0.35)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
+            ...tileStyle,
+            boxShadow: "0 1px 4px rgba(26,26,24,0.1)",
+            animation: `fadeInUp 0.4s ease-out ${i * 0.04}s both`,
           }}
         >
+          {isVideo(msg.photo_url!) ? (
+            <video src={msg.photo_url!} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} muted playsInline autoPlay loop />
+          ) : (
+            <img src={msg.photo_url!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          )}
           <span
             style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: "0.6rem 0.35rem 0.25rem",
+              background: "linear-gradient(transparent, rgba(0,0,0,0.55))",
               fontFamily: brand.font.body,
-              fontSize: "0.85rem",
+              fontSize: "0.6rem",
               fontWeight: 600,
               color: "#fff",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            From {msg.sender_name}
+            {msg.sender_name}
           </span>
-          {msg.message && (
-            <p
-              style={{
-                margin: "0.15rem 0 0",
-                fontFamily: brand.font.body,
-                fontSize: "0.8rem",
-                lineHeight: 1.3,
-                color: "rgba(255,255,255,0.85)",
-              }}
-            >
-              {msg.message}
-            </p>
-          )}
         </div>
-      </div>
-    </div>
-  );
-
-  const fillerTile = (
-    <div key="filler" style={{ flex: 1 }}>
+      ))}
+      {overflow > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          style={{
+            ...tileStyle,
+            background: brand.border,
+            border: "none",
+            fontFamily: brand.font.mono,
+            fontSize: "0.8rem",
+            color: brand.dark,
+          }}
+        >
+          +{overflow}
+        </button>
+      )}
       <button
         onClick={onAddPhoto}
         style={{
-          position: "relative",
-          width: "100%",
-          height: "100%",
-          minHeight: 100,
+          ...tileStyle,
           background: brand.dark,
           border: "none",
-          borderRadius: "12px",
-          cursor: "pointer",
-          overflow: "hidden",
-          boxShadow: "0 4px 20px rgba(26,26,24,0.25)",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: "0.25rem",
+          color: brand.accent,
+          fontFamily: brand.font.body,
+          fontSize: "0.6rem",
+          fontWeight: 600,
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: -40,
-            display: "flex",
-            flexDirection: "column",
-            gap: "18px",
-            transform: "rotate(-25deg)",
-            transformOrigin: "center center",
-            pointerEvents: "none",
-            opacity: 0.06,
-          }}
-        >
-          {Array.from({ length: 10 }).map((_, row) => (
-            <div
-              key={row}
-              style={{
-                display: "flex",
-                gap: "24px",
-                marginLeft: row % 2 === 0 ? 0 : -40,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {Array.from({ length: 6 }).map((_, col) => (
-                <span
-                  key={col}
-                  style={{
-                    fontFamily: brand.font.display,
-                    fontSize: "1rem",
-                    color: "#fff",
-                    flexShrink: 0,
-                  }}
-                >
-                  Athlast.
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={brand.accent}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ display: "block", margin: "0 auto 0.5rem" }}
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
-          <div
-            style={{
-              fontFamily: brand.font.body,
-              fontSize: "0.9rem",
-              fontWeight: 600,
-              color: "#fff",
-            }}
-          >
-            Add a photo
-          </div>
-        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span style={{ color: "#fff" }}>Add photo</span>
       </button>
-    </div>
-  );
-
-  const shorterCol = col1.length > col2.length ? "left" : "right";
-
-  return (
-    <div style={{ position: "relative", marginTop: "0.75rem" }}>
-      <div style={{ display: "flex", gap: "0.75rem", alignItems: "stretch" }}>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {col1.map((msg, i) => renderPhoto(msg, i * 2))}
-          {shorterCol === "left" && fillerTile}
-        </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {col2.map((msg, i) => renderPhoto(msg, i * 2 + 1))}
-          {shorterCol === "right" && fillerTile}
-        </div>
-      </div>
     </div>
   );
 }
 
+
 // --- Athlete Post Card ---
 
-function AthletePostCard({ msg }: { msg: Message }) {
+function AthletePostCard({ msg, onPhotoClick }: { msg: Message; onPhotoClick: (msg: Message) => void }) {
   return (
     <div
       style={{
         border: `1.5px solid ${brand.dark}`,
         borderRadius: "14px",
         overflow: "hidden",
+        marginBottom: "0.5rem",
       }}
     >
       {msg.photo_url && (
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onPhotoClick(msg)}>
           <img
             src={msg.photo_url}
             alt=""
-            style={{ width: "100%", display: "block", borderRadius: "14px 14px 0 0" }}
+            style={{ width: "100%", height: 200, objectFit: "cover", display: "block", borderRadius: "14px 14px 0 0" }}
           />
           <span
             style={{
@@ -893,220 +891,115 @@ function AthletePostCard({ msg }: { msg: Message }) {
   );
 }
 
-// --- Goal Gauge ---
+// --- Course Tracker (linear, with goal ghost) ---
 
-function GoalGauge({
-  goalTime,
-  projectedSeconds,
-}: {
-  goalTime: string;
-  projectedSeconds: number;
-}) {
-  const goalSeconds = parseTimeToSeconds(goalTime);
-  const delta = Math.round(goalSeconds - projectedSeconds); // positive = ahead
-  const isAhead = delta >= 0;
-  const absDelta = Math.abs(delta);
+const FLAT_COURSE = { path: "M0,37 L300,37", fill_path: "" };
 
-  const statusText = isAhead ? "ON TRACK" : "BEHIND";
-  const statusColor = isAhead ? brand.go : brand.behind;
-
-  const maxDelta = 120;
-  const pct = Math.min(90, Math.max(10, 50 + (delta / maxDelta) * 40));
-
-  return (
-    <div style={{ margin: "0.75rem 0 0.25rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: brand.font.mono,
-            fontSize: "0.7rem",
-            letterSpacing: "0.1em",
-            color: statusColor,
-            textTransform: "uppercase",
-          }}
-        >
-          {statusText}
-        </span>
-        <span
-          style={{
-            fontFamily: brand.font.mono,
-            fontSize: "0.65rem",
-            color: brand.muted,
-          }}
-        >
-          GOAL {goalTime}
-        </span>
-      </div>
-
-      <div
-        style={{
-          fontFamily: brand.font.display,
-          fontSize: "2.5rem",
-          fontWeight: 600,
-          letterSpacing: "-0.02em",
-          lineHeight: 1,
-          margin: "0.1rem 0",
-          fontVariantNumeric: "tabular-nums",
-          color: brand.dark,
-        }}
-      >
-        {formatSeconds(projectedSeconds)}
-      </div>
-
-      <div
-        style={{
-          fontFamily: brand.font.body,
-          fontSize: "0.85rem",
-          marginBottom: "0.75rem",
-          color: brand.dark,
-        }}
-      >
-        {"He's "}
-        <span style={{ color: statusColor, fontWeight: 600 }}>
-          {absDelta >= 60
-            ? `${Math.floor(absDelta / 60)}m ${absDelta % 60}s`
-            : `${absDelta}s`}{" "}
-          {isAhead ? "ahead" : "behind"}
-        </span>
-        {" of his goal pace."}
-      </div>
-
-      {/* Ahead/behind meter */}
-      <div style={{ position: "relative", height: 30, margin: "0 0.25rem" }}>
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 0,
-            bottom: 0,
-            width: 2,
-            background: brand.dark,
-            transform: "translateX(-50%)",
-          }}
-        />
-        <span
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: -14,
-            transform: "translateX(-50%)",
-            fontFamily: brand.font.mono,
-            fontSize: "0.5rem",
-            color: brand.muted,
-          }}
-        >
-          GOAL
-        </span>
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 22,
-            height: 2,
-            background: brand.border,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 22,
-            left: `${pct}%`,
-            width: 14,
-            height: 14,
-            borderRadius: "50%",
-            background: statusColor,
-            border: `3px solid ${brand.card}`,
-            boxShadow: `0 0 0 1px ${statusColor}`,
-            transform: "translate(-50%, -50%)",
-            transition: "left 1s ease-out",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 28,
-            left: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "space-between",
-            fontFamily: brand.font.mono,
-            fontSize: "0.5rem",
-            color: brand.muted,
-          }}
-        >
-          <span>behind</span>
-          <span>ahead</span>
-        </div>
-      </div>
-    </div>
-  );
+function formatGap(s: number): string {
+  const abs = Math.abs(Math.round(s));
+  return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
-// --- Elevation Profile ---
-
-function ElevationProfile({
+function CourseTracker({
   profile,
+  distanceKm,
   progressPct,
+  athleteName,
+  ghost,
 }: {
-  profile: NonNullable<Race["elevation_profile"]>;
+  profile: Race["elevation_profile"];
+  distanceKm: number;
   progressPct: number;
+  athleteName: string;
+  ghost: { pct: number; deltaSec: number; goalTime: string } | null;
 }) {
-  const dotX = (progressPct / 100) * 300;
+  const course = profile ?? FLAT_COURSE;
+  const labels = profile?.labels ?? ["0km", `${distanceKm}km`];
+  const height = profile ? 56 : 30;
 
-  const points = profile.path
+  const points = course.path
     .replace(/[MLQ]/g, "")
     .trim()
     .split(/\s+L\s*|\s+/)
     .map((p) => p.split(",").map(Number))
     .filter((p) => p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]));
 
-  let dotY = 50;
-  if (points.length >= 2) {
-    for (let i = 0; i < points.length - 1; i++) {
-      if (dotX >= points[i][0] && dotX <= points[i + 1][0]) {
-        const t =
-          (dotX - points[i][0]) / (points[i + 1][0] - points[i][0] || 1);
-        dotY = points[i][1] + t * (points[i + 1][1] - points[i][1]);
-        break;
+  function topPctAt(pct: number): number {
+    const x = (pct / 100) * 300;
+    let y = 37;
+    if (points.length >= 2) {
+      for (let i = 0; i < points.length - 1; i++) {
+        if (x >= points[i][0] && x <= points[i + 1][0]) {
+          const t = (x - points[i][0]) / (points[i + 1][0] - points[i][0] || 1);
+          y = points[i][1] + t * (points[i + 1][1] - points[i][1]);
+          break;
+        }
       }
+      if (x >= points[points.length - 1][0]) y = points[points.length - 1][1];
     }
-    if (dotX >= points[points.length - 1][0]) {
-      dotY = points[points.length - 1][1];
-    }
+    return (y / 74) * 100;
   }
 
-  const dotTopPct = (dotY / 74) * 100;
+  const dotLabel: React.CSSProperties = {
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
+    fontFamily: brand.font.mono,
+    fontSize: "0.5rem",
+    letterSpacing: "0.05em",
+    whiteSpace: "nowrap",
+    textTransform: "uppercase",
+  };
+
+  const showRunner = progressPct > 0 && progressPct < 100;
+  const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
     <div style={{ marginTop: "0.25rem" }}>
-      <div style={{ position: "relative", height: 74 }}>
+      <div style={{ position: "relative", height, margin: "0.6rem 0" }}>
         <svg
           viewBox="0 0 300 74"
           preserveAspectRatio="none"
           style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }}
         >
-          <path d={profile.fill_path} fill="rgba(28,24,19,0.07)" />
+          {course.fill_path && <path d={course.fill_path} fill="rgba(28,24,19,0.07)" />}
           <path
-            d={profile.path}
+            d={course.path}
             fill="none"
             stroke={brand.dark}
             strokeWidth="1.5"
             strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
           />
         </svg>
-        {progressPct > 0 && progressPct < 100 && (
+
+        {/* Ghost — where the goal pace would be right now */}
+        {ghost && showRunner && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${ghost.pct}%`,
+              top: `${topPctAt(ghost.pct)}%`,
+              width: 13,
+              height: 13,
+              borderRadius: "50%",
+              background: "rgba(251,247,239,0.7)",
+              border: `1.5px dashed ${brand.muted}`,
+              transform: "translate(-50%, -50%)",
+              transition: "left 2s ease-out, top 2s ease-out",
+              opacity: 0.85,
+            }}
+          >
+            <span style={{ ...dotLabel, top: 14, color: brand.muted }}>Ghost</span>
+          </div>
+        )}
+
+        {showRunner && (
           <div
             style={{
               position: "absolute",
               left: `${progressPct}%`,
-              top: `${dotTopPct}%`,
+              top: `${topPctAt(progressPct)}%`,
               width: 13,
               height: 13,
               borderRadius: "50%",
@@ -1116,7 +1009,9 @@ function ElevationProfile({
               transform: "translate(-50%, -50%)",
               transition: "left 2s ease-out, top 2s ease-out",
             }}
-          />
+          >
+            <span style={{ ...dotLabel, bottom: 14, color: brand.dark }}>{athleteName}</span>
+          </div>
         )}
       </div>
       <div
@@ -1126,20 +1021,54 @@ function ElevationProfile({
           fontFamily: brand.font.mono,
           fontSize: "0.5rem",
           color: brand.muted,
-          marginTop: "0.15rem",
         }}
       >
-        {profile.labels.map((label, i) => (
+        {labels.map((label, i) => (
           <span key={i}>{label}</span>
         ))}
       </div>
-      {profile.context && (
+
+      {ghost && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "0.5rem",
+            marginTop: "0.5rem",
+            fontFamily: brand.font.body,
+            fontSize: "0.8rem",
+            color: brand.dark,
+          }}
+        >
+          <span>
+            {ghostAhead ? `${athleteName} is chasing the ghost` : `The ghost is chasing ${athleteName}`}
+            <span style={{ fontFamily: brand.font.mono, fontSize: "0.6rem", color: brand.muted }}>
+              {" "}· {ghost.goalTime} pace
+            </span>
+          </span>
+          <span
+            style={{
+              fontFamily: brand.font.mono,
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              color: ghostAhead ? brand.behind : brand.go,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {ghostAhead ? "−" : "+"}
+            {formatGap(ghost.deltaSec)}
+          </span>
+        </div>
+      )}
+
+      {profile?.context && (
         <div
           style={{
             fontFamily: brand.font.body,
             fontSize: "0.8rem",
             color: brand.muted,
-            marginTop: "0.5rem",
+            marginTop: "0.4rem",
             lineHeight: 1.4,
             fontStyle: "italic",
           }}
@@ -1153,53 +1082,71 @@ function ElevationProfile({
 
 // --- Finish Result ---
 
-function FinishResult({
-  finishTime,
-  goalTime,
-}: {
-  finishTime: string;
-  goalTime?: string | null;
-}) {
-  const finishSec = parseTimeToSeconds(finishTime);
-  const goalSec = goalTime ? parseTimeToSeconds(goalTime) : null;
-
-  let goalLabel = "";
-  let goalDetail = "";
-  if (goalSec !== null) {
-    const delta = goalSec - finishSec;
-    if (delta > 0) {
-      goalLabel = "GOAL SMASHED";
-      goalDetail = `Official chip time · ${delta} seconds under his goal`;
-    } else if (delta === 0) {
-      goalLabel = "GOAL HIT";
-      goalDetail = "Official chip time · right on target";
-    } else {
-      goalLabel = "FINISHED";
-      goalDetail = `Official chip time · ${Math.abs(delta)} seconds over his goal`;
-    }
-  } else {
-    goalLabel = "FINISHED";
-    goalDetail = "Official chip time";
-  }
+function TinyFireworks() {
+  const bursts = [
+    { left: "12%", top: "30%", delay: 0 },
+    { left: "88%", top: "18%", delay: 0.9 },
+    { left: "50%", top: "-4%", delay: 1.7 },
+    { left: "78%", top: "62%", delay: 2.4 },
+    { left: "22%", top: "70%", delay: 3.1 },
+  ];
+  const colors = [brand.accent, brand.go, brand.behind, "#d9a441"];
 
   return (
-    <div style={{ textAlign: "center", padding: "1rem 0 0.5rem" }}>
+    <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {bursts.map((b, bi) =>
+        Array.from({ length: 10 }).map((_, pi) => {
+          const angle = (pi / 10) * Math.PI * 2;
+          const dist = 18 + ((pi * 7 + bi * 3) % 12);
+          return (
+            <span
+              key={`${bi}-${pi}`}
+              className="tiny-firework"
+              style={{
+                position: "absolute",
+                left: b.left,
+                top: b.top,
+                width: 3,
+                height: 3,
+                borderRadius: "50%",
+                background: colors[(pi + bi) % colors.length],
+                // @ts-expect-error CSS custom properties
+                "--fx": `${(Math.cos(angle) * dist).toFixed(1)}px`,
+                "--fy": `${(Math.sin(angle) * dist).toFixed(1)}px`,
+                animation: `tinyFirework 3.8s ease-out ${b.delay}s infinite`,
+              }}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function FinishResult({
+  finishTime,
+  athleteName,
+}: {
+  finishTime: string;
+  athleteName: string;
+}) {
+  return (
+    <div style={{ position: "relative", textAlign: "center", padding: "0.75rem 0 0.25rem" }}>
+      <TinyFireworks />
       <div
         style={{
-          fontFamily: brand.font.mono,
-          fontSize: "0.65rem",
-          letterSpacing: "0.16em",
-          color: brand.go,
-          marginBottom: "0.4rem",
-          textTransform: "uppercase",
+          fontFamily: brand.font.display,
+          fontSize: "1.1rem",
+          color: brand.dark,
+          marginBottom: "0.2rem",
         }}
       >
-        {goalLabel}
+        {athleteName} finished in
       </div>
       <div
         style={{
           fontFamily: brand.font.display,
-          fontSize: "3.5rem",
+          fontSize: "2.6rem",
           fontWeight: 600,
           letterSpacing: "-0.02em",
           lineHeight: 1,
@@ -1211,28 +1158,19 @@ function FinishResult({
       </div>
       <div
         style={{
-          fontFamily: brand.font.mono,
-          fontSize: "0.7rem",
-          color: brand.muted,
-          marginTop: "0.5rem",
-        }}
-      >
-        {goalDetail}
-      </div>
-      <div
-        style={{
           fontFamily: brand.font.body,
-          fontSize: "0.9rem",
-          margin: "1rem 0.5rem 0.25rem",
+          fontSize: "0.85rem",
+          margin: "0.6rem 0.5rem 0",
           lineHeight: 1.4,
-          color: brand.dark,
+          color: brand.muted,
         }}
       >
-        He did it — and he doesn&apos;t have his phone yet. Be the first to tell him.
+        He doesn&apos;t have his phone yet, send him support.
       </div>
     </div>
   );
 }
+
 
 // ============================================================
 // MAIN COMPONENT
@@ -1278,7 +1216,7 @@ export function RacePageV2({
   // Splash for new messages
   const [splashMsg, setSplashMsg] = useState<Message | null>(null);
   const [splashReady, setSplashReady] = useState(false);
-  const prevCountRef = useRef(messages.length);
+  const seenIdsRef = useRef(new Set(initialMessages.map((m) => m.id)));
   const splashQueueRef = useRef<Message[]>([]);
   const splashActiveRef = useRef(false);
 
@@ -1296,15 +1234,15 @@ export function RacePageV2({
     }, 4000);
   }
 
+  // Detect arrivals by id (a count check misses them once the feed is capped at 50)
   useEffect(() => {
-    if (messages.length > prevCountRef.current) {
-      const arriving = messages.slice(0, messages.length - prevCountRef.current);
-      splashQueueRef.current.push(...arriving);
-      processQueue();
-    }
-    prevCountRef.current = messages.length;
+    const arriving = messages.filter((m) => !seenIdsRef.current.has(m.id));
+    if (arriving.length === 0) return;
+    arriving.forEach((m) => seenIdsRef.current.add(m.id));
+    splashQueueRef.current.push(...[...arriving].reverse()); // oldest first
+    processQueue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+  }, [messages]);
 
   // Polling
   const pollSplits = useCallback(async () => {
@@ -1365,24 +1303,6 @@ export function RacePageV2({
         ? (completedSplits.length / athleteSplits.length) * 100
         : 0;
 
-  const projectedFinishSeconds = (() => {
-    if (completedSplits.length < 2) return null;
-    const first = completedSplits[0];
-    const last = completedSplits[completedSplits.length - 1];
-    const firstKm = splitNameToKm(first.Name, race.distance_km) ?? 0;
-    const lastKm = splitNameToKm(last.Name, race.distance_km);
-    if (lastKm === null || lastKm <= firstKm) return null;
-
-    const firstTime = first.Chip ? parseTimeToSeconds(first.Chip) : 0;
-    const lastTime = last.Chip ? parseTimeToSeconds(last.Chip) : 0;
-    const elapsed = lastTime - firstTime;
-    const covered = lastKm - firstKm;
-    if (covered <= 0) return null;
-
-    const pacePerKm = elapsed / covered;
-    return firstTime + pacePerKm * (race.distance_km - firstKm);
-  })();
-
   const finishTime = (() => {
     const finishSplit = athleteSplits.find(
       (s) => s.Exists && (s.Name === "Finishline" || s.Name === "Finish")
@@ -1390,17 +1310,40 @@ export function RacePageV2({
     return finishSplit?.Chip ?? null;
   })();
 
-  // Sort messages
-  const athletePosts = messages.filter((m) => m.is_athlete_post);
-  const supporterMessages = messages.filter((m) => !m.is_athlete_post && m.message && !m.photo_url && m.id !== splashMsg?.id);
-  const supporterPhotos = messages.filter((m) => !m.is_athlete_post && m.photo_url && m.id !== splashMsg?.id);
-
-  const isFinished = race.status === "finished";
-  const sortedSupporterMessages = isFinished
-    ? [...supporterMessages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    : supporterMessages;
-
   const goalTime = athlete?.goal_time ?? null;
+  const firstName = athlete?.athletes.first_name ?? "";
+
+  // Goal ghost: compare the last timing split against even goal pace, then
+  // carry that gap forward so the ghost sits relative to the runner's dot.
+  const ghost = (() => {
+    if (!goalTime || race.status !== "live" || completedSplits.length < 2) return null;
+    const goalSec = parseTimeToSeconds(goalTime);
+    const last = completedSplits[completedSplits.length - 1];
+    const lastKm = splitNameToKm(last.Name, race.distance_km);
+    if (!goalSec || lastKm === null || !last.Chip) return null;
+    const t = parseTimeToSeconds(last.Chip);
+    const ghostKm = Math.min(race.distance_km, (t / goalSec) * race.distance_km);
+    const runnerKm = (runnerPct / 100) * race.distance_km;
+    const pct = Math.min(100, Math.max(0, ((runnerKm + ghostKm - lastKm) / race.distance_km) * 100));
+    const deltaSec = Math.round((goalSec * lastKm) / race.distance_km - t); // positive = ahead of the ghost
+    const parts = goalTime.split(":");
+    const goalLabel = parts.length === 3 && parts[2] === "00" ? `${parts[0]}:${parts[1]}` : goalTime;
+    return { pct, deltaSec, goalTime: goalLabel };
+  })();
+
+  // Newest first everywhere: after the race the congratulations lead, drifting back to the pre-race messages
+  const byNewest = (a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  const athletePosts = messages.filter((m) => m.is_athlete_post);
+  const supporterMessages = messages
+    .filter((m) => !m.is_athlete_post && m.message && !m.photo_url && m.id !== splashMsg?.id)
+    .sort(byNewest);
+  const supporterPhotos = messages
+    .filter((m) => !m.is_athlete_post && m.photo_url && m.id !== splashMsg?.id)
+    .sort(byNewest);
+
+  const openSelfie = () => selfieInputRef.current?.click();
+  const openGallery = () => galleryInputRef.current?.click();
+  const openMessage = () => setInputMode("message");
 
   return (
     <div style={{ minHeight: "100vh", background: brand.bg }}>
@@ -1435,61 +1378,88 @@ export function RacePageV2({
           50% { transform: translateY(-8px); }
         }
         .floating-scroll::-webkit-scrollbar { display: none; }
+        @keyframes tinyFirework {
+          0% { transform: translate(0, 0) scale(1); opacity: 0; }
+          4% { opacity: 1; }
+          40% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
+          100% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tiny-firework { display: none; }
+        }
       `}</style>
 
       {/* ─── Header ─── */}
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "2rem 1.25rem 0" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1.25rem 0" }}>
         <div
           style={{
             fontFamily: brand.font.body,
-            fontSize: "0.8rem",
+            fontSize: "0.75rem",
             color: brand.muted,
-            margin: "0 0 0.15rem",
           }}
         >
           {race.name}
         </div>
         <div
           style={{
-            fontFamily: brand.font.display,
-            fontSize: "1.5rem",
-            fontWeight: 600,
-            letterSpacing: "-0.015em",
-            lineHeight: 1.04,
-            color: brand.dark,
-          }}
-        >
-          {athlete
-            ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
-            : race.name}
-        </div>
-        <div
-          style={{
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
-            marginTop: "0.4rem",
+            marginTop: "0.1rem",
           }}
         >
+          <div
+            style={{
+              fontFamily: brand.font.display,
+              fontSize: "1.35rem",
+              fontWeight: 600,
+              letterSpacing: "-0.015em",
+              lineHeight: 1.1,
+              color: brand.dark,
+            }}
+          >
+            {athlete
+              ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
+              : race.name}
+          </div>
           <StatusPill race={race} estimatedKm={estimatedKm} />
-          {goalTime && <GoalBadge goalTime={goalTime} />}
+          {race.status !== "upcoming" && completedSplits.length > 0 && (
+            <button
+              onClick={() => setShowSplits(true)}
+              style={{
+                marginLeft: "auto",
+                padding: "0.2rem 0.6rem",
+                background: "transparent",
+                border: `1px solid ${brand.border}`,
+                borderRadius: "20px",
+                fontFamily: brand.font.mono,
+                fontSize: "0.6rem",
+                letterSpacing: "0.08em",
+                color: brand.dark,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Splits
+            </button>
+          )}
         </div>
       </div>
 
       {/* ─── Content ─── */}
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 1.25rem 2rem" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 1.25rem 6rem" }}>
 
         {/* ===================== BEFORE ===================== */}
         {race.status === "upcoming" && (
           <>
-            {/* Race starts in */}
-            <div style={{ marginTop: "1.25rem" }}>
+            <div style={{ marginTop: "0.9rem" }}>
               <div
                 style={{
                   fontFamily: brand.font.body,
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
                   color: brand.muted,
-                  marginBottom: "0.4rem",
+                  marginBottom: "0.25rem",
                 }}
               >
                 Race starts in
@@ -1497,203 +1467,81 @@ export function RacePageV2({
               <BigCountdown raceDate={race.race_date} />
             </div>
 
-            {/* Goal */}
-            {goalTime && (
-              <div style={{ marginTop: "1.25rem" }}>
-                <div
-                  style={{
-                    fontFamily: brand.font.body,
-                    fontSize: "0.9rem",
-                    color: brand.muted,
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  {athlete?.athletes.first_name ?? "His"}&apos;s goal
-                </div>
-                <div
-                  style={{
-                    fontFamily: brand.font.display,
-                    fontSize: "2.8rem",
-                    fontWeight: 600,
-                    color: brand.dark,
-                    lineHeight: 1,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {goalTime}
-                </div>
-              </div>
-            )}
-
             {/* Athlete's own posts */}
             {athletePosts.length > 0 && (
               <>
                 <SectionLabel>
-                  From {athlete?.athletes.first_name ?? "the athlete"}
+                  From {firstName || "the athlete"}
                 </SectionLabel>
                 {athletePosts.map((post) => (
-                  <AthletePostCard key={post.id} msg={post} />
+                  <AthletePostCard key={post.id} msg={post} onPhotoClick={setLightboxMsg} />
                 ))}
               </>
             )}
-
-            {/* Photos */}
-            <PhotoMasonry
-              photos={supporterPhotos}
-              onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => galleryInputRef.current?.click()}
-            />
-
-            {/* Messages */}
-            <SectionLabel>Messages of support</SectionLabel>
-            <FloatingMessages
-              messages={sortedSupporterMessages}
-              onSendMessage={() => setInputMode("message")}
-              onBubbleTap={(msg) => setLightboxMsg(msg)}
-            />
-
-            <ActionButtons
-              onSelfie={() => selfieInputRef.current?.click()}
-              onGallery={() => galleryInputRef.current?.click()}
-              onMessage={() => setInputMode("message")}
-            />
           </>
         )}
 
         {/* ===================== DURING ===================== */}
         {race.status === "live" && (
           <>
-            {/* Goal gauge */}
-            {goalTime && projectedFinishSeconds !== null && (
-              <GoalGauge
-                goalTime={goalTime}
-                projectedSeconds={projectedFinishSeconds}
-              />
-            )}
-
-            {/* Elevation profile */}
-            {race.elevation_profile && (
-              <>
-                <SectionLabel>On the course</SectionLabel>
-                <ElevationProfile
-                  profile={race.elevation_profile}
-                  progressPct={runnerPct}
-                />
-              </>
-            )}
-
-            <PhotoMasonry
-              photos={supporterPhotos}
-              onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => galleryInputRef.current?.click()}
+            <SectionLabel>On the course</SectionLabel>
+            <CourseTracker
+              profile={race.elevation_profile}
+              distanceKm={race.distance_km}
+              progressPct={runnerPct}
+              athleteName={firstName}
+              ghost={ghost}
             />
-
-            <SectionLabel>Messages of support</SectionLabel>
-            <FloatingMessages
-              messages={sortedSupporterMessages}
-              onSendMessage={() => setInputMode("message")}
-              onBubbleTap={(msg) => setLightboxMsg(msg)}
-            />
-
-            <ActionButtons
-              onSelfie={() => selfieInputRef.current?.click()}
-              onGallery={() => galleryInputRef.current?.click()}
-              onMessage={() => setInputMode("message")}
-            />
-
-            {/* Splits button */}
-            {completedSplits.length > 0 && (
-              <button
-                onClick={() => setShowSplits(true)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  marginTop: "0.75rem",
-                  padding: "0.5rem",
-                  background: "transparent",
-                  border: `1px solid ${brand.border}`,
-                  borderRadius: "10px",
-                  fontFamily: brand.font.mono,
-                  fontSize: "0.65rem",
-                  fontWeight: 600,
-                  color: brand.muted,
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                View splits
-              </button>
-            )}
           </>
         )}
 
         {/* ===================== AFTER ===================== */}
         {race.status === "finished" && (
-          <>
-            {/* Result */}
-            {finishTime ? (
-              <FinishResult finishTime={finishTime} goalTime={goalTime} />
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "1.5rem 0",
-                  fontFamily: brand.font.body,
-                  fontSize: "0.9rem",
-                  color: brand.muted,
-                }}
-              >
-                Awaiting official results...
-              </div>
-            )}
-
-            <ActionButtons
-              onSelfie={() => selfieInputRef.current?.click()}
-              onGallery={() => galleryInputRef.current?.click()}
-              onMessage={() => setInputMode("message")}
-            />
-
-            <PhotoMasonry
-              photos={supporterPhotos}
-              onPhotoClick={(msg) => setLightboxMsg(msg)}
-              onAddPhoto={() => galleryInputRef.current?.click()}
-            />
-
-            <SectionLabel>Messages of support</SectionLabel>
-            <FloatingMessages
-              messages={sortedSupporterMessages}
-              onSendMessage={() => setInputMode("message")}
-              onBubbleTap={(msg) => setLightboxMsg(msg)}
-            />
-
-            {/* Splits */}
-            {completedSplits.length > 0 && (
-              <button
-                onClick={() => setShowSplits(true)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  marginTop: "1rem",
-                  padding: "0.5rem",
-                  background: "transparent",
-                  border: `1px solid ${brand.border}`,
-                  borderRadius: "10px",
-                  fontFamily: brand.font.mono,
-                  fontSize: "0.65rem",
-                  fontWeight: 600,
-                  color: brand.muted,
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                View splits
-              </button>
-            )}
-          </>
+          finishTime ? (
+            <FinishResult finishTime={finishTime} athleteName={firstName} />
+          ) : (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "1rem 0",
+                fontFamily: brand.font.body,
+                fontSize: "0.9rem",
+                color: brand.muted,
+              }}
+            >
+              Awaiting official results...
+            </div>
+          )
         )}
+
+        {/* ===================== SUPPORT (all states) ===================== */}
+        <PhotoGrid
+          photos={supporterPhotos}
+          onPhotoClick={(msg) => setLightboxMsg(msg)}
+          onAddPhoto={openGallery}
+        />
+
+        <SectionLabel>Messages of support</SectionLabel>
+        <FloatingMessages
+          messages={supporterMessages}
+          onSendMessage={openMessage}
+          onBubbleTap={(msg) => setLightboxMsg(msg)}
+        />
+
+        <ActionButtons
+          onSelfie={openSelfie}
+          onGallery={openGallery}
+          onMessage={openMessage}
+        />
       </div>
+
+      {!inputMode && !lightboxMsg && !showSplits && !splashMsg && (
+        <FloatingAddButton
+          onSelfie={openSelfie}
+          onGallery={openGallery}
+          onMessage={openMessage}
+        />
+      )}
 
       {/* Hidden file inputs — triggered directly, no modal flash */}
       <input
@@ -1971,7 +1819,8 @@ export function RacePageV2({
               athleteId={selectedAthlete}
               athleteName={athlete?.athletes.first_name ?? ""}
               athleteKm={estimatedKm}
-              onSent={() => {
+              onSent={(sent) => {
+                if (sent) setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [sent, ...prev]));
                 pollMessages();
                 setInputMode(null);
                 setPendingFile(null);
@@ -2113,7 +1962,7 @@ function MessageInput({
   athleteId: string;
   athleteName: string;
   athleteKm: number | null;
-  onSent: () => void;
+  onSent: (sent: Message | null) => void;
   initialFile?: File | null;
   initialPreview?: string | null;
 }) {
@@ -2170,10 +2019,11 @@ function MessageInput({
     });
 
     if (res.ok) {
+      const data = await res.json().catch(() => null);
       setMessage("");
       setPhoto(null);
       setPhotoPreview(null);
-      onSent();
+      onSent(data?.message ?? null);
     }
     setSending(false);
   }
