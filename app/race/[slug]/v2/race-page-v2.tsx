@@ -967,6 +967,35 @@ function CourseTracker({
 
   return (
     <div style={{ marginTop: "0.25rem" }}>
+      {ghost && (
+        <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
+          <div
+            style={{
+              fontFamily: brand.font.mono,
+              fontSize: "0.75rem",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: brand.goal,
+              fontWeight: 600,
+            }}
+          >
+            Goal · {ghost.goalTime}
+          </div>
+          <div
+            style={{
+              fontFamily: brand.font.display,
+              fontSize: "2.2rem",
+              fontWeight: 600,
+              lineHeight: 1.1,
+              fontVariantNumeric: "tabular-nums",
+              color: ghostAhead ? brand.behind : brand.go,
+            }}
+          >
+            {ghostAhead ? "−" : "+"}
+            {formatGap(ghost.deltaSec)}
+          </div>
+        </div>
+      )}
       <div style={{ position: "relative", height, margin: "0.6rem 0" }}>
         <svg
           viewBox="0 0 300 74"
@@ -1002,7 +1031,7 @@ function CourseTracker({
             }}
           >
             <span className="dot-pulse" style={{ position: "absolute", inset: -3, borderRadius: "50%", background: brand.goal }} />
-            <span style={{ ...dotLabel, top: 16, color: brand.goal, fontWeight: 600, fontSize: "0.55rem" }}>Goal {ghost.goalTime}</span>
+            <span style={{ ...dotLabel, top: 16, color: brand.goal, fontWeight: 600, fontSize: "0.55rem" }}>Goal</span>
           </div>
         )}
 
@@ -1042,22 +1071,6 @@ function CourseTracker({
         ))}
       </div>
 
-      {ghost && (
-        <div
-          style={{
-            marginTop: "0.5rem",
-            fontFamily: brand.font.mono,
-            fontSize: "0.7rem",
-            color: brand.muted,
-          }}
-        >
-          <span style={{ fontWeight: 600, color: ghostAhead ? brand.behind : brand.go }}>
-            {ghostAhead ? "−" : "+"}
-            {formatGap(ghost.deltaSec)}
-          </span>{" "}
-          {ghostAhead ? "behind" : "ahead of"} {ghost.goalTime} goal
-        </div>
-      )}
     </div>
   );
 }
