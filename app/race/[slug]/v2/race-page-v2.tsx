@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Split } from "@/lib/raceresult";
+import { rtrtToSplits } from "@/lib/rtrt-splits";
 
 const brand = {
   bg: "#F5F0E8",
@@ -51,6 +52,7 @@ interface RaceAthlete {
   athlete_id: string;
   bib_number: number;
   raceresult_pid: number;
+  rtrt_athlete_id?: string | null;
   goal_time?: string | null;
   athletes: Athlete;
 }
@@ -76,11 +78,19 @@ function parseTimeToSeconds(t: string): number {
   return 0;
 }
 
+function isFinishSplit(name: string): boolean {
+  return /^finish(line)?$/i.test(name);
+}
+
+// Handles Race Result names (Startline, 5K, Finishline) and RTRT names (START, HALFWAY, 11M, FINISH)
 function splitNameToKm(name: string, raceDistanceKm: number): number | null {
-  if (name === "Startline" || name === "Start") return 0;
-  if (name === "Finishline" || name === "Finish") return raceDistanceKm;
+  if (/^start(line)?$/i.test(name)) return 0;
+  if (isFinishSplit(name)) return raceDistanceKm;
+  if (/^halfway$/i.test(name)) return raceDistanceKm / 2;
   const kmMatch = name.match(/^(\d+(?:\.\d+)?)\s*K$/i);
   if (kmMatch) return parseFloat(kmMatch[1]);
+  const mileMatch = name.match(/^(\d+(?:\.\d+)?)\s*M$/i);
+  if (mileMatch) return parseFloat(mileMatch[1]) * 1.609344;
   return null;
 }
 
@@ -915,7 +925,7 @@ function CourseTracker({
 }) {
   const course = profile ?? FLAT_COURSE;
   const labels = profile?.labels ?? ["0km", `${distanceKm}km`];
-  const height = profile ? 56 : 30;
+  const height = profile ? 74 : 30;
 
   const points = course.path
     .replace(/[MLQ]/g, "")
@@ -951,7 +961,7 @@ function CourseTracker({
     textTransform: "uppercase",
   };
 
-  const showRunner = progressPct > 0 && progressPct < 100;
+  const showRunner = progressPct > 0;
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
@@ -990,7 +1000,7 @@ function CourseTracker({
               opacity: 0.85,
             }}
           >
-            <span style={{ ...dotLabel, top: 14, color: brand.muted }}>Ghost</span>
+            <span style={{ ...dotLabel, top: 14, color: brand.muted }}>Goal</span>
           </div>
         )}
 
@@ -1031,49 +1041,17 @@ function CourseTracker({
       {ghost && (
         <div
           style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: "0.5rem",
             marginTop: "0.5rem",
-            fontFamily: brand.font.body,
-            fontSize: "0.8rem",
-            color: brand.dark,
+            fontFamily: brand.font.mono,
+            fontSize: "0.7rem",
+            color: brand.muted,
           }}
         >
-          <span>
-            {ghostAhead ? `${athleteName} is chasing the ghost` : `The ghost is chasing ${athleteName}`}
-            <span style={{ fontFamily: brand.font.mono, fontSize: "0.6rem", color: brand.muted }}>
-              {" "}· {ghost.goalTime} pace
-            </span>
-          </span>
-          <span
-            style={{
-              fontFamily: brand.font.mono,
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              color: ghostAhead ? brand.behind : brand.go,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
+          <span style={{ fontWeight: 600, color: ghostAhead ? brand.behind : brand.go }}>
             {ghostAhead ? "−" : "+"}
             {formatGap(ghost.deltaSec)}
-          </span>
-        </div>
-      )}
-
-      {profile?.context && (
-        <div
-          style={{
-            fontFamily: brand.font.body,
-            fontSize: "0.8rem",
-            color: brand.muted,
-            marginTop: "0.4rem",
-            lineHeight: 1.4,
-            fontStyle: "italic",
-          }}
-        >
-          {profile.context}
+          </span>{" "}
+          {ghostAhead ? "behind" : "ahead of"} {ghost.goalTime} goal
         </div>
       )}
     </div>
@@ -1181,11 +1159,13 @@ export function RacePageV2({
   raceAthletes,
   initialSplits,
   initialMessages,
+  demoElapsedSeconds,
 }: {
   race: Race;
   raceAthletes: RaceAthlete[];
   initialSplits: Record<string, Split[]>;
   initialMessages: Message[];
+  demoElapsedSeconds?: number;
 }) {
   const [splits, setSplits] = useState(initialSplits);
   const [messages, setMessages] = useState(initialMessages);
@@ -1247,7 +1227,19 @@ export function RacePageV2({
   // Polling
   const pollSplits = useCallback(async () => {
     for (const ra of raceAthletes) {
-      if (!ra.raceresult_pid) continue;
+      if (!ra.raceresult_pid) {
+        if (!ra.rtrt_athlete_id) continue;
+        try {
+          const res = await fetch(`/api/race/tracking?race_athlete_id=${ra.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.tracking?.splits?.length) {
+              setSplits((prev) => ({ ...prev, [ra.athlete_id]: rtrtToSplits(data.tracking.splits) }));
+            }
+          }
+        } catch {}
+        continue;
+      }
       try {
         const res = await fetch(
           `/api/race/splits?race_id=${race.id}&athlete_id=${ra.athlete_id}`
@@ -1273,23 +1265,42 @@ export function RacePageV2({
   useEffect(() => {
     if (race.status !== "live") return;
     const interval = setInterval(() => {
-      pollSplits();
+      if (!demoElapsedSeconds) pollSplits();
       pollMessages();
     }, 30000);
     return () => clearInterval(interval);
-  }, [race.status, pollSplits, pollMessages]);
+  }, [race.status, pollSplits, pollMessages, demoElapsedSeconds]);
 
   // Derived data
   const athlete = raceAthletes.find((ra) => ra.athlete_id === selectedAthlete);
-  const athleteSplits = splits[selectedAthlete] ?? [];
+  const allSplits = splits[selectedAthlete] ?? [];
+
+  // Demo clock: replay real splits as if the athlete is `demoElapsedSeconds` into the race
+  const athleteSplits = demoElapsedSeconds
+    ? allSplits.map((s) => ({ ...s, Exists: s.Exists && !!s.Chip && parseTimeToSeconds(s.Chip) <= demoElapsedSeconds }))
+    : allSplits;
+  const demoKm = (() => {
+    if (!demoElapsedSeconds) return null;
+    const timed = allSplits
+      .map((s) => ({ km: splitNameToKm(s.Name, race.distance_km), t: s.Chip ? parseTimeToSeconds(s.Chip) : null }))
+      .filter((p): p is { km: number; t: number } => p.km !== null && p.t !== null);
+    for (let i = 0; i < timed.length - 1; i++) {
+      const a = timed[i], b = timed[i + 1];
+      if (demoElapsedSeconds >= a.t && demoElapsedSeconds <= b.t) {
+        return a.km + ((demoElapsedSeconds - a.t) / (b.t - a.t || 1)) * (b.km - a.km);
+      }
+    }
+    return null;
+  })();
   const completedSplits = athleteSplits.filter((s) => s.Exists);
 
   const estimatedKm = (() => {
+    if (demoKm !== null) return Math.round(demoKm * 10) / 10;
     if (completedSplits.length < 2) return null;
     const last = completedSplits[completedSplits.length - 1];
     const lastKm = splitNameToKm(last.Name, race.distance_km);
     if (lastKm === null) return lastKm;
-    if (last.Name === "Finishline" || last.Name === "Finish") return race.distance_km;
+    if (isFinishSplit(last.Name)) return race.distance_km;
     const lastIdx = athleteSplits.indexOf(last);
     const next = athleteSplits[lastIdx + 1];
     const nextKm = next ? splitNameToKm(next.Name, race.distance_km) : race.distance_km;
@@ -1305,7 +1316,7 @@ export function RacePageV2({
 
   const finishTime = (() => {
     const finishSplit = athleteSplits.find(
-      (s) => s.Exists && (s.Name === "Finishline" || s.Name === "Finish")
+      (s) => s.Exists && isFinishSplit(s.Name)
     );
     return finishSplit?.Chip ?? null;
   })();
@@ -1323,8 +1334,10 @@ export function RacePageV2({
     if (!goalSec || lastKm === null || !last.Chip) return null;
     const t = parseTimeToSeconds(last.Chip);
     const ghostKm = Math.min(race.distance_km, (t / goalSec) * race.distance_km);
-    const runnerKm = (runnerPct / 100) * race.distance_km;
-    const pct = Math.min(100, Math.max(0, ((runnerKm + ghostKm - lastKm) / race.distance_km) * 100));
+    // Real gaps are tiny on a full-course line, so exaggerate the spacing (min 8%, max 25%)
+    const gapPct = ((ghostKm - lastKm) / race.distance_km) * 100;
+    const visualGap = Math.sign(gapPct || -1) * Math.min(25, Math.max(8, Math.abs(gapPct) * 8));
+    const pct = Math.min(100, Math.max(0, runnerPct + visualGap));
     const deltaSec = Math.round((goalSec * lastKm) / race.distance_km - t); // positive = ahead of the ghost
     const parts = goalTime.split(":");
     const goalLabel = parts.length === 3 && parts[2] === "00" ? `${parts[0]}:${parts[1]}` : goalTime;
@@ -1391,21 +1404,29 @@ export function RacePageV2({
 
       {/* ─── Header ─── */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "1rem 1.25rem 0" }}>
-        <div
-          style={{
-            fontFamily: brand.font.body,
-            fontSize: "0.75rem",
-            color: brand.muted,
-          }}
-        >
-          {race.name}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <div
+            style={{
+              fontFamily: brand.font.body,
+              fontSize: "0.75rem",
+              color: brand.muted,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {race.name}
+          </div>
+          <span style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+            <StatusPill race={race} estimatedKm={estimatedKm} />
+          </span>
         </div>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
-            marginTop: "0.1rem",
+            marginTop: "0.2rem",
           }}
         >
           <div
@@ -1422,7 +1443,6 @@ export function RacePageV2({
               ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
               : race.name}
           </div>
-          <StatusPill race={race} estimatedKm={estimatedKm} />
           {race.status !== "upcoming" && completedSplits.length > 0 && (
             <button
               onClick={() => setShowSplits(true)}

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { fetchConfig, fetchParticipantSplits, Split } from "@/lib/raceresult";
+import { rtrtToSplits } from "@/lib/rtrt-splits";
 import { notFound } from "next/navigation";
 import { RacePageV2 } from "./race-page-v2";
 
@@ -75,6 +76,19 @@ export default async function RacePageV2Route({
     }
   }
 
+  // RTRT-tracked athletes: use the latest cached snapshot (the client polls for fresh ones)
+  for (const ra of raceAthletes ?? []) {
+    if (initialSplits[ra.athlete_id]?.length || !ra.rtrt_athlete_id) continue;
+    const { data: snapshot } = await supabase
+      .from("tracking_snapshots")
+      .select("splits")
+      .eq("race_athlete_id", ra.id)
+      .order("scraped_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (snapshot?.splits?.length) initialSplits[ra.athlete_id] = rtrtToSplits(snapshot.splits);
+  }
+
   const { data: messages } = await supabase
     .from("supporter_messages")
     .select("*")
@@ -88,6 +102,7 @@ export default async function RacePageV2Route({
       raceAthletes={raceAthletes ?? []}
       initialSplits={initialSplits}
       initialMessages={messages ?? []}
+      demoElapsedSeconds={slug === "phil-dublin-half" ? 62 * 60 : undefined}
     />
   );
 }
