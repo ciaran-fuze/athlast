@@ -14,6 +14,7 @@ const brand = {
   grid: "#d8d2c5",
   go: "#1C7A4D",
   goSoft: "#DEECDF",
+  goal: "#C8871A",
   behind: "#C24327",
   behindSoft: "#F4E2D9",
   font: {
@@ -993,14 +994,15 @@ function CourseTracker({
               width: 13,
               height: 13,
               borderRadius: "50%",
-              background: "rgba(251,247,239,0.7)",
-              border: `1.5px dashed ${brand.muted}`,
+              background: brand.goal,
+              border: `3px solid ${brand.card}`,
+              boxShadow: `0 0 0 1px ${brand.goal}`,
               transform: "translate(-50%, -50%)",
               transition: "left 2s ease-out, top 2s ease-out",
-              opacity: 0.85,
             }}
           >
-            <span style={{ ...dotLabel, top: 14, color: brand.muted }}>Goal</span>
+            <span className="dot-pulse" style={{ position: "absolute", inset: -3, borderRadius: "50%", background: brand.goal }} />
+            <span style={{ ...dotLabel, top: 16, color: brand.goal, fontWeight: 600, fontSize: "0.55rem" }}>Goal {ghost.goalTime}</span>
           </div>
         )}
 
@@ -1018,8 +1020,10 @@ function CourseTracker({
               boxShadow: `0 0 0 1px ${brand.dark}`,
               transform: "translate(-50%, -50%)",
               transition: "left 2s ease-out, top 2s ease-out",
+              zIndex: 1,
             }}
           >
+            <span className="dot-pulse" style={{ position: "absolute", inset: -3, borderRadius: "50%", background: brand.dark, animationDelay: "0.6s" }} />
             <span style={{ ...dotLabel, bottom: 14, color: brand.dark }}>{athleteName}</span>
           </div>
         )}
@@ -1397,8 +1401,14 @@ export function RacePageV2({
           40% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
           100% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
         }
+        @keyframes dotPulse {
+          0% { transform: scale(1); opacity: 0.45; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+        .dot-pulse { animation: dotPulse 1.8s ease-out infinite; pointer-events: none; }
         @media (prefers-reduced-motion: reduce) {
           .tiny-firework { display: none; }
+          .dot-pulse { animation: none; opacity: 0; }
         }
       `}</style>
 
