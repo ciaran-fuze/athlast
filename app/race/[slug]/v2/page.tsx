@@ -77,6 +77,20 @@ export default async function RacePageV2Route({
     }
   }
 
+  // Finished demo: fall back to mock results if Race Result no longer serves the event
+  if (slug === "dublin-half-2026" && raceAthletes) {
+    const mockFinished: Split[] = [
+      { Name: "Startline", Exists: true, TOD: "08:30:04", Chip: "00:04" },
+      { Name: "5K", Exists: true, TOD: "08:54:36", Chip: "24:32", Speed: "4:53 min/km" },
+      { Name: "10K", Exists: true, TOD: "09:18:48", Chip: "48:44", Speed: "4:50 min/km" },
+      { Name: "15K", Exists: true, TOD: "09:43:10", Chip: "1:13:06", Speed: "4:52 min/km" },
+      { Name: "Finishline", Exists: true, TOD: "10:12:22", Chip: "1:42:18", Speed: "4:51 min/km" },
+    ];
+    for (const ra of raceAthletes) {
+      if (!initialSplits[ra.athlete_id]?.some((s) => s.Exists)) initialSplits[ra.athlete_id] = mockFinished;
+    }
+  }
+
   // RTRT-tracked athletes: use the latest cached snapshot (the client polls for fresh ones)
   for (const ra of raceAthletes ?? []) {
     if (initialSplits[ra.athlete_id]?.length || !ra.rtrt_athlete_id) continue;
