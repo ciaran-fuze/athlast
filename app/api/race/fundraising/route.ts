@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { fetchFundraising } from "@/lib/fundraising";
+import { fetchFundraising, recordFundraisingSnapshot } from "@/lib/fundraising";
 
 export async function GET(request: Request) {
   const raceAthleteId = new URL(request.url).searchParams.get("race_athlete_id");
@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   }
 
   const fundraising = await fetchFundraising(ra.fundraising_url);
+  await recordFundraisingSnapshot(raceAthleteId, fundraising);
   return Response.json(
     { fundraising },
     { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }

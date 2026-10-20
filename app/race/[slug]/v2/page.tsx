@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { fetchConfig, fetchParticipantSplits, Split } from "@/lib/raceresult";
 import { rtrtToSplits } from "@/lib/rtrt-splits";
-import { fetchFundraising } from "@/lib/fundraising";
+import { fetchFundraising, recordFundraisingSnapshot } from "@/lib/fundraising";
 import { notFound } from "next/navigation";
 import { RacePageV2 } from "./race-page-v2";
 
@@ -90,8 +90,9 @@ export default async function RacePageV2Route({
     if (snapshot?.splits?.length) initialSplits[ra.athlete_id] = rtrtToSplits(snapshot.splits);
   }
 
-  const fundraisingUrl = raceAthletes?.[0]?.fundraising_url;
-  const fundraising = fundraisingUrl ? await fetchFundraising(fundraisingUrl) : null;
+  const fundraisingRa = raceAthletes?.[0];
+  const fundraising = fundraisingRa?.fundraising_url ? await fetchFundraising(fundraisingRa.fundraising_url) : null;
+  if (fundraising && fundraisingRa) await recordFundraisingSnapshot(fundraisingRa.id, fundraising);
 
   const { data: messages } = await supabase
     .from("supporter_messages")

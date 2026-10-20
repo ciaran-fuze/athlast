@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase";
+
 export interface FundraisingProgress {
   url: string;
   donateUrl: string;
@@ -73,5 +75,30 @@ export async function fetchFundraising(url: string): Promise<FundraisingProgress
     return data;
   } catch {
     return hit?.data ?? fallback;
+  }
+}
+
+const SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000;
+
+/** Keep a reading of progress over time (at most one per 5 min per athlete), so race-day donations can be measured. */
+export async function recordFundraisingSnapshot(raceAthleteId: string, data: FundraisingProgress): Promise<void> {
+  if (data.raised === null) return;
+  try {
+    const { data: last } = await supabase
+      .from("fundraising_snapshots")
+      .select("captured_at")
+      .eq("race_athlete_id", raceAthleteId)
+      .order("captured_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (last && Date.now() - new Date(last.captured_at).getTime() < SNAPSHOT_INTERVAL_MS) return;
+    await supabase.from("fundraising_snapshots").insert({
+      race_athlete_id: raceAthleteId,
+      raised: data.raised,
+      target: data.target,
+      supporters: data.supporters,
+    });
+  } catch {
+    // Never let tracking break the page
   }
 }
