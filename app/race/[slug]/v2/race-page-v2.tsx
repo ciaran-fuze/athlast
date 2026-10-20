@@ -903,15 +903,18 @@ function FloatingMessages({
 // --- Photo Grid ---
 
 function PhotoGrid({
-  photos,
+  photos: supporterPhotos,
+  pinned,
   onPhotoClick,
   onAddPhoto,
 }: {
   photos: Message[];
+  pinned?: Message | null;
   onPhotoClick: (msg: Message) => void;
   onAddPhoto: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const photos = pinned ? [pinned, ...supporterPhotos] : supporterPhotos;
   if (photos.length === 0) return null;
 
   // Two rows (7 photos + add tile); beyond that a "+N" tile reveals the rest
@@ -968,7 +971,7 @@ function PhotoGrid({
               textOverflow: "ellipsis",
             }}
           >
-            {msg.sender_name}
+            {msg.id === pinned?.id ? "Race kit" : msg.sender_name}
           </span>
         </div>
       ))}
@@ -1584,6 +1587,8 @@ export function RacePageV2({
   // Newest first everywhere: after the race the congratulations lead, drifting back to the pre-race messages
   const byNewest = (a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   const athletePosts = messages.filter((m) => m.is_athlete_post);
+  // The athlete's pre-race kit photo is pinned first on the live page
+  const raceKitPost = athletePosts.filter((m) => m.photo_url).sort(byNewest)[0] ?? null;
   const supporterMessages = messages
     .filter((m) => !m.is_athlete_post && m.message && !m.photo_url && m.id !== splashMsg?.id)
     .sort(byNewest);
@@ -1770,6 +1775,7 @@ export function RacePageV2({
         {/* ===================== SUPPORT (all states) ===================== */}
         <PhotoGrid
           photos={supporterPhotos}
+          pinned={status === "live" ? raceKitPost : null}
           onPhotoClick={(msg) => setLightboxMsg(msg)}
           onAddPhoto={openGallery}
         />
