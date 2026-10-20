@@ -173,6 +173,29 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // --- Big Countdown (before state) ---
 
+// Faint, blurred Dublin skyline behind the before-race countdown
+function SkylineBackdrop() {
+  return (
+    <img
+      src="/dublin-skyline.png"
+      alt=""
+      aria-hidden
+      style={{
+        position: "absolute",
+        left: "50%",
+        bottom: 0,
+        width: "115%",
+        maxWidth: 560,
+        transform: "translateX(-50%)",
+        opacity: 0.13,
+        filter: "blur(1.5px)",
+        pointerEvents: "none",
+        zIndex: -1,
+      }}
+    />
+  );
+}
+
 function BigCountdown({
   raceDate,
   startTime,
@@ -199,7 +222,8 @@ function BigCountdown({
   // Gun has gone but tracking hasn't seen them cross the start mat yet
   if (diff === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "2.5rem 0 2rem" }}>
+      <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
+        <SkylineBackdrop />
         <div
           style={{
             width: 10,
@@ -254,7 +278,8 @@ function BigCountdown({
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "2.5rem 0 2rem" }}>
+    <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
+      <SkylineBackdrop />
       <div
         style={{
           fontFamily: brand.font.mono,
