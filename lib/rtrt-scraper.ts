@@ -3,6 +3,8 @@ import { type Browser, type Page, type Frame } from "playwright-core";
 export interface RtrtSplit {
   name: string;
   time: string | null;
+  /** Local time of day the athlete crossed this point (HH:MM:SS) */
+  tod?: string | null;
   pace: string | null;
 }
 
@@ -116,16 +118,17 @@ function extractAthleteData(frame: Frame, text: string): RtrtAthleteData {
   const bibMatch = text.match(/No\.(\d+)/);
   if (bibMatch) bib = bibMatch[1];
 
-  // Splits — "SPLIT_NAME \t HH:MM:SS \t HH:MM:SS \t MM:SS"
+  // Splits — "SPLIT_NAME \t chip time \t time of day \t pace"
   const splits: RtrtSplit[] = [];
   const splitPattern =
-    /^(START|FINISH|HALFWAY|5K|10K|15K|20K|25K|30K|35K|40K|\d+(?:\.\d+)?(?:K|M|MI))\s+(\d{1,2}:\d{2}:\d{2})\s+\d{2}:\d{2}:\d{2}\s+(\d{2}:\d{2}|---)/gim;
+    /^(START|FINISH|HALFWAY|HALF|5K|10K|15K|20K|25K|30K|35K|40K|\d+(?:\.\d+)?(?:K|M|MI))\s+(\d{1,2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}|---)/gim;
   let match;
   while ((match = splitPattern.exec(text)) !== null) {
     splits.push({
       name: match[1].toUpperCase(),
       time: match[2],
-      pace: match[3] === "---" ? null : match[3],
+      tod: match[3],
+      pace: match[4] === "---" ? null : match[4],
     });
   }
 

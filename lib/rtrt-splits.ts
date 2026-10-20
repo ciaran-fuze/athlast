@@ -16,6 +16,7 @@ export function rtrtToSplits(splits: RtrtSplit[]): Split[] {
     Name: s.name,
     Exists: !!s.time,
     Chip: s.time ?? undefined,
+    TOD: s.tod ?? undefined,
     Speed: milePaceToKm(s.pace),
   }));
 }

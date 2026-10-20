@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Split } from "@/lib/raceresult";
 import { rtrtToSplits } from "@/lib/rtrt-splits";
+import type { FundraisingProgress } from "@/lib/fundraising";
 
 const brand = {
   bg: "#F5F0E8",
@@ -32,6 +33,7 @@ interface Race {
   location: string;
   distance_km: number;
   status: string;
+  start_time?: string | null;
   elevation_profile?: {
     path: string;
     fill_path: string;
@@ -54,6 +56,7 @@ interface RaceAthlete {
   bib_number: number;
   raceresult_pid: number;
   rtrt_athlete_id?: string | null;
+  fundraising_url?: string | null;
   goal_time?: string | null;
   athletes: Athlete;
 }
@@ -79,6 +82,34 @@ function parseTimeToSeconds(t: string): number {
   return 0;
 }
 
+/** Convert a Dublin local date + time of day to epoch ms (handles the clocks-change weekend). */
+function dublinTimeToMs(date: string, tod: string): number {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi, sec] = tod.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi, sec || 0);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Dublin",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(guess));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const asDublin = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return guess - (asDublin - guess);
+}
+
+function formatDublinClock(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Dublin",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
 function isFinishSplit(name: string): boolean {
   return /^finish(line)?$/i.test(name);
 }
@@ -87,7 +118,7 @@ function isFinishSplit(name: string): boolean {
 function splitNameToKm(name: string, raceDistanceKm: number): number | null {
   if (/^start(line)?$/i.test(name)) return 0;
   if (isFinishSplit(name)) return raceDistanceKm;
-  if (/^halfway$/i.test(name)) return raceDistanceKm / 2;
+  if (/^half(way)?$/i.test(name)) return raceDistanceKm / 2;
   const kmMatch = name.match(/^(\d+(?:\.\d+)?)\s*K$/i);
   if (kmMatch) return parseFloat(kmMatch[1]);
   const mileMatch = name.match(/^(\d+(?:\.\d+)?)\s*M$/i);
@@ -142,83 +173,120 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // --- Big Countdown (before state) ---
 
-function BigCountdown({ raceDate }: { raceDate: string }) {
-  const [now, setNow] = useState(Date.now());
+function BigCountdown({
+  raceDate,
+  startTime,
+  athleteName,
+}: {
+  raceDate: string;
+  startTime?: string | null;
+  athleteName: string;
+}) {
+  // Start ticking on the client only, so server and client HTML match
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const tick = () => setNow(Date.now());
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
   }, []);
 
-  const raceStart = new Date(`${raceDate}T17:00:00+01:00`).getTime();
-  const diff = Math.max(0, raceStart - now);
+  const raceStart = startTime
+    ? new Date(startTime).getTime()
+    : new Date(`${raceDate}T17:00:00+01:00`).getTime();
+  const diff = now === null ? null : Math.max(0, raceStart - now);
 
-  const hours = Math.floor(diff / 3600000);
-  const mins = Math.floor((diff % 3600000) / 60000);
-  const secs = Math.floor((diff % 60000) / 1000);
+  // Gun has gone but tracking hasn't seen them cross the start mat yet
+  if (diff === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "2.5rem 0 2rem" }}>
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: brand.go,
+            margin: "0 auto 0.9rem",
+            animation: "progressPulse 2s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            fontFamily: brand.font.display,
+            fontSize: "1.6rem",
+            fontWeight: 600,
+            color: brand.dark,
+            lineHeight: 1.2,
+          }}
+        >
+          Waiting for {athleteName || "the athlete"} to cross the start line
+        </div>
+      </div>
+    );
+  }
 
-  const unitStyle: React.CSSProperties = {
-    fontFamily: brand.font.mono,
-    fontSize: "0.6rem",
-    color: brand.muted,
-    letterSpacing: "0.08em",
-    marginTop: "0.2rem",
-  };
+  const days = diff === null ? null : Math.floor(diff / 86400000);
+  const units: { value: number | null; label: string }[] = [
+    ...(days ? [{ value: days, label: "DAYS" }] : []),
+    { value: diff === null ? null : Math.floor((diff % 86400000) / 3600000), label: "HRS" },
+    { value: diff === null ? null : Math.floor((diff % 3600000) / 60000), label: "MIN" },
+    { value: diff === null ? null : Math.floor((diff % 60000) / 1000), label: "SEC" },
+  ];
 
   const numStyle: React.CSSProperties = {
     fontFamily: brand.font.display,
-    fontSize: "2rem",
+    fontSize: units.length > 3 ? "2.8rem" : "3.4rem",
     fontWeight: 600,
     color: brand.dark,
     lineHeight: 1,
     fontVariantNumeric: "tabular-nums",
-    minWidth: "2.6rem",
+    minWidth: units.length > 3 ? "3.2rem" : "4rem",
     textAlign: "center",
   };
 
   const sepStyle: React.CSSProperties = {
     fontFamily: brand.font.display,
-    fontSize: "1.5rem",
+    fontSize: "2rem",
     color: brand.border,
-    padding: "0 0.25rem",
+    padding: "0 0.15rem",
     alignSelf: "flex-start",
-    marginTop: "0.2rem",
+    marginTop: "0.4rem",
   };
 
-  const days = Math.floor(diff / 86400000);
-  const toGoParts: string[] = [];
-  if (days > 0) toGoParts.push(`${days} day${days !== 1 ? "s" : ""}`);
-  if (hours % 24 > 0 || days === 0) toGoParts.push(`${days > 0 ? hours % 24 : hours} hour${(days > 0 ? hours % 24 : hours) !== 1 ? "s" : ""}`);
-  if (mins > 0) toGoParts.push(`${mins} min${mins !== 1 ? "s" : ""}`);
-  const toGoText = toGoParts.slice(0, 2).join(", ") + " to go";
-
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={numStyle}>{String(hours).padStart(2, "0")}</div>
-          <div style={unitStyle}>HRS</div>
-        </div>
-        <div style={sepStyle}>:</div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={numStyle}>{String(mins).padStart(2, "0")}</div>
-          <div style={unitStyle}>MIN</div>
-        </div>
-        <div style={sepStyle}>:</div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={numStyle}>{String(secs).padStart(2, "0")}</div>
-          <div style={unitStyle}>SEC</div>
-        </div>
-      </div>
+    <div style={{ textAlign: "center", padding: "2.5rem 0 2rem" }}>
       <div
         style={{
-          textAlign: "center",
-          marginTop: "0.3rem",
-          fontFamily: brand.font.body,
-          fontSize: "0.8rem",
+          fontFamily: brand.font.mono,
+          fontSize: "0.65rem",
+          letterSpacing: "0.16em",
           color: brand.muted,
+          textTransform: "uppercase",
+          marginBottom: "0.9rem",
         }}
       >
-        {toGoText}
+        Race starts in
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        {units.map((u, i) => (
+          <div key={u.label} style={{ display: "flex" }}>
+            {i > 0 && <div style={sepStyle}>:</div>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={numStyle}>{u.value === null ? "--" : String(u.value).padStart(2, "0")}</div>
+              <div
+                style={{
+                  fontFamily: brand.font.mono,
+                  fontSize: "0.6rem",
+                  color: brand.muted,
+                  letterSpacing: "0.08em",
+                  marginTop: "0.35rem",
+                }}
+              >
+                {u.label}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -226,8 +294,16 @@ function BigCountdown({ raceDate }: { raceDate: string }) {
 
 // --- Status Pill ---
 
-function StatusPill({ race, estimatedKm }: { race: Race; estimatedKm: number | null }) {
-  if (race.status === "live") {
+function StatusPill({
+  status,
+  startTime,
+  estimatedKm,
+}: {
+  status: string;
+  startTime?: string | null;
+  estimatedKm: number | null;
+}) {
+  if (status === "live") {
     return (
       <span
         style={{
@@ -259,7 +335,7 @@ function StatusPill({ race, estimatedKm }: { race: Race; estimatedKm: number | n
     );
   }
 
-  if (race.status === "finished") {
+  if (status === "finished") {
     return (
       <span
         style={{
@@ -292,7 +368,7 @@ function StatusPill({ race, estimatedKm }: { race: Race; estimatedKm: number | n
         textTransform: "uppercase",
       }}
     >
-      STARTS 9:00
+      STARTS {startTime ? formatDublinClock(startTime) : "9:00"}
     </span>
   );
 }
@@ -477,6 +553,105 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
   );
 }
 
+
+// --- Fundraising ---
+
+function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; athleteName: string }) {
+  const hasProgress = data.raised !== null && data.target !== null && data.target > 0;
+  const pct = hasProgress ? Math.round((data.raised! / data.target!) * 100) : 0;
+  const money = (n: number) => `${data.currency}${n.toLocaleString("en-IE")}`;
+
+  return (
+    <div
+      style={{
+        marginTop: "1rem",
+        padding: "0.9rem 1rem",
+        background: brand.card,
+        border: `1px solid ${brand.border}`,
+        borderRadius: "14px",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: brand.font.mono,
+          fontSize: "0.6rem",
+          letterSpacing: "0.1em",
+          color: brand.muted,
+          textTransform: "uppercase",
+          marginBottom: "0.5rem",
+        }}
+      >
+        {data.charity ? `Raising for ${data.charity}` : `${athleteName || "The athlete"} is fundraising`}
+      </div>
+
+      {hasProgress && (
+        <>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem" }}>
+            <div style={{ fontFamily: brand.font.body, fontSize: "0.85rem", color: brand.muted }}>
+              <span
+                style={{
+                  fontFamily: brand.font.display,
+                  fontSize: "1.6rem",
+                  fontWeight: 600,
+                  color: brand.dark,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {money(data.raised!)}
+              </span>{" "}
+              raised of {money(data.target!)}
+            </div>
+            <span
+              style={{
+                fontFamily: brand.font.mono,
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: pct >= 100 ? brand.go : brand.dark,
+              }}
+            >
+              {pct}%
+            </span>
+          </div>
+          <div style={{ height: 6, background: brand.border, borderRadius: 3, overflow: "hidden", margin: "0.5rem 0 0.75rem" }}>
+            <div
+              style={{
+                width: `${Math.min(pct, 100)}%`,
+                height: "100%",
+                background: brand.go,
+                borderRadius: 3,
+                transition: "width 1s ease-out",
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+        <span style={{ fontFamily: brand.font.mono, fontSize: "0.65rem", color: brand.muted }}>
+          {data.supporters !== null ? `${data.supporters} supporters` : ""}
+        </span>
+        <a
+          href={data.donateUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: "0.6rem 1.2rem",
+            background: brand.dark,
+            color: "#F3ECDD",
+            borderRadius: "11px",
+            fontFamily: brand.font.body,
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Donate
+        </a>
+      </div>
+    </div>
+  );
+}
 
 // --- Floating Messages ---
 
@@ -705,6 +880,7 @@ function FloatingMessages({
                     {msg.sender_name}
                   </span>
                   <span
+                    suppressHydrationWarning
                     style={{
                       fontFamily: brand.font.mono,
                       fontSize: "0.55rem",
@@ -852,30 +1028,16 @@ function AthletePostCard({ msg, onPhotoClick }: { msg: Message; onPhotoClick: (m
       }}
     >
       {msg.photo_url && (
-        <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onPhotoClick(msg)}>
+        <div style={{ position: "relative", cursor: "pointer", background: brand.card, padding: "0.6rem 0.6rem 0" }} onClick={() => onPhotoClick(msg)}>
           <img
             src={msg.photo_url}
             alt=""
-            style={{ width: "100%", height: 200, objectFit: "cover", display: "block", borderRadius: "14px 14px 0 0" }}
+            style={{ maxWidth: "100%", maxHeight: 220, width: "auto", height: "auto", display: "block", margin: "0 auto" }}
           />
-          <span
-            style={{
-              position: "absolute",
-              bottom: "0.5rem",
-              left: "0.5rem",
-              fontFamily: brand.font.mono,
-              fontSize: "0.55rem",
-              color: "rgba(255,255,255,0.85)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {formatTimeShort(msg.created_at)}
-          </span>
         </div>
       )}
       <div style={{ padding: "0.65rem 0.8rem" }}>
-        <div
+        <div suppressHydrationWarning
           style={{
             fontFamily: brand.font.mono,
             fontSize: "0.55rem",
@@ -885,7 +1047,7 @@ function AthletePostCard({ msg, onPhotoClick }: { msg: Message; onPhotoClick: (m
             textTransform: "uppercase",
           }}
         >
-          HIS OWN WORDS
+          HIS OWN WORDS · {formatTimeShort(msg.created_at)}
         </div>
         <div
           style={{
@@ -1177,12 +1339,14 @@ export function RacePageV2({
   initialSplits,
   initialMessages,
   demoElapsedSeconds,
+  initialFundraising,
 }: {
   race: Race;
   raceAthletes: RaceAthlete[];
   initialSplits: Record<string, Split[]>;
   initialMessages: Message[];
   demoElapsedSeconds?: number;
+  initialFundraising?: FundraisingProgress | null;
 }) {
   const [splits, setSplits] = useState(initialSplits);
   const [messages, setMessages] = useState(initialMessages);
@@ -1279,17 +1443,34 @@ export function RacePageV2({
     } catch {}
   }, [race.id]);
 
+  // Fundraising progress: refresh every 5 minutes while the page is open
+  const [fundraising, setFundraising] = useState(initialFundraising ?? null);
+  const fundraisingRaId = initialFundraising ? raceAthletes[0]?.id : null;
   useEffect(() => {
-    if (race.status !== "live") return;
-    const interval = setInterval(() => {
-      if (!demoElapsedSeconds) pollSplits();
-      pollMessages();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [race.status, pollSplits, pollMessages, demoElapsedSeconds]);
+    if (!fundraisingRaId) return;
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/race/fundraising?race_athlete_id=${fundraisingRaId}`);
+        if (res.ok) setFundraising((await res.json()).fundraising);
+      } catch {}
+    }, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [fundraisingRaId]);
+
+  // Client clock for projecting RTRT runners between timing mats
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const t = setInterval(tick, 5000);
+    return () => clearInterval(t);
+  }, []);
 
   // Derived data
   const athlete = raceAthletes.find((ra) => ra.athlete_id === selectedAthlete);
+  const goalTime = athlete?.goal_time ?? null;
+  const firstName = athlete?.athletes.first_name ?? "";
+  const isRtrt = !!athlete?.rtrt_athlete_id && !demoElapsedSeconds;
   const allSplits = splits[selectedAthlete] ?? [];
 
   // Demo clock: replay real splits as if the athlete is `demoElapsedSeconds` into the race
@@ -1311,8 +1492,50 @@ export function RacePageV2({
   })();
   const completedSplits = athleteSplits.filter((s) => s.Exists);
 
+  // RTRT only reports mats already crossed: project forward from the last one at their average pace
+  const liveKm = (() => {
+    if (!isRtrt || nowMs === null) return null;
+    const last = completedSplits[completedSplits.length - 1];
+    if (!last?.TOD || !last.Chip || isFinishSplit(last.Name)) return null;
+    const lastKm = splitNameToKm(last.Name, race.distance_km);
+    if (lastKm === null) return null;
+    const goalSec = goalTime ? parseTimeToSeconds(goalTime) : 0;
+    const pacePerKm =
+      lastKm > 0 ? parseTimeToSeconds(last.Chip) / lastKm : goalSec ? goalSec / race.distance_km : 360;
+    const sinceLast = (nowMs - dublinTimeToMs(race.race_date, last.TOD)) / 1000;
+    if (sinceLast <= 0) return lastKm;
+    return Math.min(race.distance_km * 0.995, lastKm + sinceLast / pacePerKm);
+  })();
+
+  // Tracked athletes go live when they cross the start mat and finish when they cross the line
+  const status = (() => {
+    if (!isRtrt || race.status === "finished") return race.status;
+    if (completedSplits.some((sp) => isFinishSplit(sp.Name))) return "finished";
+    if (completedSplits.length > 0) return "live";
+    return "upcoming";
+  })();
+
+  const startMs = race.start_time ? new Date(race.start_time).getTime() : null;
+  const shouldPoll =
+    status === "live" ||
+    (isRtrt && status === "upcoming" && startMs !== null && nowMs !== null && nowMs >= startMs - 10 * 60000);
+
+  useEffect(() => {
+    if (!shouldPoll) return;
+    const first = isRtrt ? setTimeout(pollSplits, 0) : undefined;
+    const interval = setInterval(() => {
+      if (!demoElapsedSeconds) pollSplits();
+      pollMessages();
+    }, 30000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
+  }, [shouldPoll, isRtrt, pollSplits, pollMessages, demoElapsedSeconds]);
+
   const estimatedKm = (() => {
     if (demoKm !== null) return Math.round(demoKm * 10) / 10;
+    if (liveKm !== null) return Math.round(liveKm * 10) / 10;
     if (completedSplits.length < 2) return null;
     const last = completedSplits[completedSplits.length - 1];
     const lastKm = splitNameToKm(last.Name, race.distance_km);
@@ -1338,13 +1561,10 @@ export function RacePageV2({
     return finishSplit?.Chip ?? null;
   })();
 
-  const goalTime = athlete?.goal_time ?? null;
-  const firstName = athlete?.athletes.first_name ?? "";
-
   // Goal ghost: compare the last timing split against even goal pace, then
   // carry that gap forward so the ghost sits relative to the runner's dot.
   const ghost = (() => {
-    if (!goalTime || race.status !== "live" || completedSplits.length < 2) return null;
+    if (!goalTime || status !== "live" || completedSplits.length < 2) return null;
     const goalSec = parseTimeToSeconds(goalTime);
     const last = completedSplits[completedSplits.length - 1];
     const lastKm = splitNameToKm(last.Name, race.distance_km);
@@ -1441,7 +1661,7 @@ export function RacePageV2({
             {race.name}
           </div>
           <span style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
-            <StatusPill race={race} estimatedKm={estimatedKm} />
+            <StatusPill status={status} startTime={race.start_time} estimatedKm={estimatedKm} />
           </span>
         </div>
         <div
@@ -1466,7 +1686,7 @@ export function RacePageV2({
               ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
               : race.name}
           </div>
-          {race.status !== "upcoming" && completedSplits.length > 0 && (
+          {status !== "upcoming" && completedSplits.length > 0 && (
             <button
               onClick={() => setShowSplits(true)}
               style={{
@@ -1494,21 +1714,9 @@ export function RacePageV2({
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 1.25rem 6rem" }}>
 
         {/* ===================== BEFORE ===================== */}
-        {race.status === "upcoming" && (
+        {status === "upcoming" && (
           <>
-            <div style={{ marginTop: "0.9rem" }}>
-              <div
-                style={{
-                  fontFamily: brand.font.body,
-                  fontSize: "0.8rem",
-                  color: brand.muted,
-                  marginBottom: "0.25rem",
-                }}
-              >
-                Race starts in
-              </div>
-              <BigCountdown raceDate={race.race_date} />
-            </div>
+            <BigCountdown raceDate={race.race_date} startTime={race.start_time} athleteName={firstName} />
 
             {/* Athlete's own posts */}
             {athletePosts.length > 0 && (
@@ -1525,7 +1733,7 @@ export function RacePageV2({
         )}
 
         {/* ===================== DURING ===================== */}
-        {race.status === "live" && (
+        {status === "live" && (
           <>
             <SectionLabel>On the course</SectionLabel>
             <CourseTracker
@@ -1539,7 +1747,7 @@ export function RacePageV2({
         )}
 
         {/* ===================== AFTER ===================== */}
-        {race.status === "finished" && (
+        {status === "finished" && (
           finishTime ? (
             <FinishResult finishTime={finishTime} athleteName={firstName} />
           ) : (
@@ -1556,6 +1764,8 @@ export function RacePageV2({
             </div>
           )
         )}
+
+        {fundraising && <FundraisingCard data={fundraising} athleteName={firstName} />}
 
         {/* ===================== SUPPORT (all states) ===================== */}
         <PhotoGrid
@@ -1855,7 +2065,7 @@ export function RacePageV2({
                 textAlign: "center",
               }}
             >
-              {pendingFile ? "Add a caption" : race.status === "finished" ? "Send congratulations" : "Send a message"}
+              {pendingFile ? "Add a caption" : status === "finished" ? "Send congratulations" : "Send a message"}
             </h3>
             <MessageInput
               raceId={race.id}

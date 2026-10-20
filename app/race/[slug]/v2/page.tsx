@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { fetchConfig, fetchParticipantSplits, Split } from "@/lib/raceresult";
 import { rtrtToSplits } from "@/lib/rtrt-splits";
+import { fetchFundraising } from "@/lib/fundraising";
 import { notFound } from "next/navigation";
 import { RacePageV2 } from "./race-page-v2";
 
@@ -26,7 +27,7 @@ export default async function RacePageV2Route({
     .select("*, athletes(*)")
     .eq("race_id", race.id);
 
-  let initialSplits: Record<string, Split[]> = {};
+  const initialSplits: Record<string, Split[]> = {};
 
   // Mock data for the live demo race
   if (slug === "dublin-half-2026-live" && raceAthletes) {
@@ -89,6 +90,9 @@ export default async function RacePageV2Route({
     if (snapshot?.splits?.length) initialSplits[ra.athlete_id] = rtrtToSplits(snapshot.splits);
   }
 
+  const fundraisingUrl = raceAthletes?.[0]?.fundraising_url;
+  const fundraising = fundraisingUrl ? await fetchFundraising(fundraisingUrl) : null;
+
   const { data: messages } = await supabase
     .from("supporter_messages")
     .select("*")
@@ -102,6 +106,7 @@ export default async function RacePageV2Route({
       raceAthletes={raceAthletes ?? []}
       initialSplits={initialSplits}
       initialMessages={messages ?? []}
+      initialFundraising={fundraising}
       demoElapsedSeconds={slug === "phil-dublin-half" ? 62 * 60 : undefined}
     />
   );
