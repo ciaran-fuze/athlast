@@ -1103,6 +1103,51 @@ function formatGap(s: number): string {
   return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
+function formatElapsed(sec: number): string {
+  const t = Math.max(0, Math.floor(sec));
+  return `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+// Race clock for athletes without a goal; ticks every second on the client only
+function ElapsedTimer({ elapsedAt }: { elapsedAt: (nowMs: number) => number | null }) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
+  const sec = now === null ? null : elapsedAt(now);
+  return (
+    <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
+      <div
+        style={{
+          fontFamily: brand.font.mono,
+          fontSize: "0.75rem",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: brand.muted,
+          fontWeight: 600,
+        }}
+      >
+        Elapsed
+      </div>
+      <div
+        style={{
+          fontFamily: brand.font.display,
+          fontSize: "2.2rem",
+          fontWeight: 600,
+          lineHeight: 1.1,
+          fontVariantNumeric: "tabular-nums",
+          color: brand.dark,
+        }}
+      >
+        {sec === null ? "--:--:--" : formatElapsed(sec)}
+      </div>
+    </div>
+  );
+}
+
 const WINDOW_KM = 2;
 
 function CourseTracker({
@@ -1111,6 +1156,7 @@ function CourseTracker({
   runnerKm,
   athleteName,
   ghost,
+  elapsedAt,
   onOpenMap,
 }: {
   profile: Race["elevation_profile"];
@@ -1118,6 +1164,7 @@ function CourseTracker({
   runnerKm: number;
   athleteName: string;
   ghost: { offsetKm: number; deltaSec: number; goalTime: string } | null;
+  elapsedAt?: ((nowMs: number) => number | null) | null;
   onOpenMap?: () => void;
 }) {
   const course = profile ?? FLAT_COURSE;
@@ -1181,7 +1228,7 @@ function CourseTracker({
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
-    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: onOpenMap && !ghost ? 36 : 0 }}>
+    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: onOpenMap && !ghost && !elapsedAt ? 36 : 0 }}>
       {onOpenMap && (
         <button
           onClick={onOpenMap}
@@ -1209,6 +1256,7 @@ function CourseTracker({
           </svg>
         </button>
       )}
+      {!ghost && elapsedAt && <ElapsedTimer elapsedAt={elapsedAt} />}
       {ghost && (
         <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
           <div
@@ -1695,6 +1743,16 @@ export function RacePageV2({
     return { offsetKm, deltaSec, goalTime: goalLabel };
   })();
 
+  // Race clock: demo clock, or time since the runner crossed the start mat
+  const startTod = completedSplits.find((sp) => splitNameToKm(sp.Name, race.distance_km) === 0)?.TOD;
+  const elapsedAt = fixedDemoSeconds
+    ? () => fixedDemoSeconds
+    : demoLoop
+      ? (ms: number) => demoLoop.fromSec + (((ms / 1000) * demoLoop.speed) % (demoLoop.toSec - demoLoop.fromSec))
+      : isRtrt && startTod
+        ? (ms: number) => (ms - dublinTimeToMs(race.race_date, startTod)) / 1000
+        : null;
+
   // Newest first everywhere: after the race the congratulations lead, drifting back to the pre-race messages
   const byNewest = (a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   const athletePosts = messages.filter((m) => m.is_athlete_post);
@@ -1858,6 +1916,7 @@ export function RacePageV2({
               runnerKm={(runnerPct / 100) * race.distance_km}
               athleteName={firstName}
               ghost={ghost}
+              elapsedAt={elapsedAt}
               onOpenMap={race.elevation_profile?.route ? () => setShowMap(true) : undefined}
             />
           </>
