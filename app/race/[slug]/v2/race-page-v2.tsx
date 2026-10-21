@@ -1858,6 +1858,12 @@ export function RacePageV2({
           40% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
           100% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
         }
+        @keyframes nameShake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-5px); }
+          40%, 80% { transform: translateX(5px); }
+        }
+        .name-shake { animation: nameShake 0.35s ease-in-out; }
         @keyframes dotPulse {
           0% { transform: scale(1); opacity: 0.45; }
           100% { transform: scale(2.8); opacity: 0; }
@@ -2472,10 +2478,18 @@ function MessageInput({
   const [photo, setPhoto] = useState<File | null>(initialFile ?? null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(initialPreview ?? null);
   const [sending, setSending] = useState(false);
+  const [nameMissing, setNameMissing] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!hasName && !name.trim()) return;
+    if (!name.trim()) {
+      // Make it obvious why nothing was sent
+      setHasName(false);
+      setNameMissing(true);
+      requestAnimationFrame(() => nameRef.current?.focus());
+      return;
+    }
     if (!message.trim() && !photo) return;
     setSending(true);
 
@@ -2537,13 +2551,18 @@ function MessageInput({
       >
         {!hasName && (
           <input
+            ref={nameRef}
             type="text"
             placeholder="Your name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (e.target.value.trim()) setNameMissing(false);
+            }}
+            className={nameMissing ? "name-shake" : undefined}
             style={{
               padding: "0.5rem 0.75rem",
-              border: `1px solid ${brand.border}`,
+              border: `1.5px solid ${nameMissing ? brand.behind : brand.border}`,
               borderRadius: "8px",
               fontSize: "16px",
               fontFamily: brand.font.body,
@@ -2552,6 +2571,11 @@ function MessageInput({
               color: brand.dark,
             }}
           />
+        )}
+        {nameMissing && (
+          <div style={{ fontFamily: brand.font.body, fontSize: "0.8rem", color: brand.behind, paddingLeft: "0.25rem", marginTop: "-0.15rem" }}>
+            {`Add your name so ${athleteName || "they"} knows who it’s from`}
+          </div>
         )}
         {photoPreview && (
           <div style={{ position: "relative", display: "inline-block" }}>
