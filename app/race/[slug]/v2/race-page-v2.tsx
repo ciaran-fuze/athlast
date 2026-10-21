@@ -2490,7 +2490,7 @@ export function RacePageV2({
                     {split.Name}
                   </span>
                   <div style={{ textAlign: "right" }}>
-                    {split.Chip && (
+                    {split.Exists && split.Chip && (
                       <span
                         style={{
                           fontFamily: brand.font.mono,
@@ -2502,7 +2502,7 @@ export function RacePageV2({
                         {split.Chip}
                       </span>
                     )}
-                    {split.Speed && (
+                    {split.Exists && split.Speed && (
                       <span
                         style={{
                           fontFamily: brand.font.mono,
