@@ -574,7 +574,7 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
   const [open, setOpen] = useState(false);
 
   const icon = (d: React.ReactNode) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {d}
     </svg>
   );
@@ -644,9 +644,9 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
                 minWidth: 176,
                 minHeight: 54,
                 padding: "0 1.25rem",
-                background: brand.card,
-                color: brand.dark,
-                border: `1px solid ${brand.border}`,
+                background: brand.dark,
+                color: "#F3ECDD",
+                border: "none",
                 borderRadius: "16px",
                 fontFamily: brand.font.body,
                 fontSize: "1rem",
