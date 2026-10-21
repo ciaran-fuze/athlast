@@ -1998,6 +1998,14 @@ export function RacePageV2({
         ? (ms: number) => (ms - dublinTimeToMs(race.race_date, startTod)) / 1000
         : null;
 
+  // Average pace to the last mat crossed
+  const avgPace = (() => {
+    const last = [...completedSplits].reverse().find((sp) => sp.Chip && (splitNameToKm(sp.Name, race.distance_km) ?? 0) > 0);
+    if (!last) return null;
+    const secPerKm = Math.round(parseTimeToSeconds(last.Chip!) / splitNameToKm(last.Name, race.distance_km)!);
+    return `${Math.floor(secPerKm / 60)}:${String(secPerKm % 60).padStart(2, "0")}`;
+  })();
+
   // Newest first everywhere: after the race the congratulations lead, drifting back to the pre-race messages
   const byNewest = (a: Message, b: Message) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   const athletePosts = messages.filter((m) => m.is_athlete_post);
@@ -2465,6 +2473,17 @@ export function RacePageV2({
             >
               Splits
             </h3>
+            {avgPace && (
+              <div style={{ textAlign: "center", margin: "-0.4rem 0 1rem" }}>
+                <div style={{ fontFamily: brand.font.mono, fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: brand.muted }}>
+                  Avg pace
+                </div>
+                <div style={{ fontFamily: brand.font.display, fontSize: "1.9rem", fontWeight: 600, lineHeight: 1.1, color: brand.dark, fontVariantNumeric: "tabular-nums" }}>
+                  {avgPace}
+                  <span style={{ fontFamily: brand.font.mono, fontSize: "0.75rem", fontWeight: 400, color: brand.muted }}> /km</span>
+                </div>
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {athleteSplits.map((split) => (
                 <div
