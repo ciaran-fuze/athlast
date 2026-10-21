@@ -657,21 +657,25 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
             </span>
           </div>
           {hasProgress && (
-            <div style={{ fontFamily: brand.font.body, fontSize: "0.75rem", color: brand.muted, marginTop: "0.1rem", whiteSpace: "nowrap" }}>
-              <span
+            <>
+              <div
                 style={{
                   fontFamily: brand.font.display,
-                  fontSize: "1.15rem",
+                  fontSize: "2.1rem",
                   fontWeight: 600,
+                  lineHeight: 1.05,
                   color: brand.dark,
                   fontVariantNumeric: "tabular-nums",
+                  marginTop: "0.15rem",
                 }}
               >
                 {money(data.raised!)}
-              </span>{" "}
-              of {money(data.target!)}
-              <span style={{ fontFamily: brand.font.mono, fontWeight: 600, color: pct >= 100 ? brand.go : brand.dark }}> · {pct}%</span>
-            </div>
+              </div>
+              <div style={{ fontFamily: brand.font.body, fontSize: "0.9rem", color: brand.muted, whiteSpace: "nowrap" }}>
+                raised of {money(data.target!)}
+                <span style={{ fontFamily: brand.font.mono, fontSize: "0.85rem", fontWeight: 600, color: pct >= 100 ? brand.go : brand.dark }}> · {pct}%</span>
+              </div>
+            </>
           )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem", flexShrink: 0 }}>
