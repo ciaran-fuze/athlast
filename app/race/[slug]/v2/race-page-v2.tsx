@@ -1220,16 +1220,45 @@ function PhotoGrid({
       {overflow > 0 && (
         <button
           onClick={onShowAll}
-          style={{
-            ...tileStyle,
-            background: brand.border,
-            border: "none",
-            fontFamily: brand.font.mono,
-            fontSize: "0.8rem",
-            color: brand.dark,
-          }}
+          aria-label={`See all ${photos.length} photos`}
+          style={{ ...tileStyle, padding: 0, border: "none", background: brand.dark }}
         >
-          +{overflow}
+          {/* Peek at the next photo so it reads as "more in here" */}
+          {isVideo(photos[MAX_COLLAPSED - 1].photo_url!) ? (
+            <video src={photos[MAX_COLLAPSED - 1].photo_url!} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          ) : (
+            <img src={photos[MAX_COLLAPSED - 1].photo_url!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          )}
+          <span style={{ position: "absolute", inset: 0, background: "rgba(26,26,24,0.55)" }} />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            aria-hidden
+            style={{ position: "absolute", top: 7, right: 7 }}
+          >
+            <rect x="8" y="8" width="13" height="13" rx="2" />
+            <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+          </svg>
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: brand.font.display,
+              fontSize: "1.5rem",
+              fontWeight: 600,
+              color: "#fff",
+            }}
+          >
+            +{overflow}
+          </span>
         </button>
       )}
       <button
