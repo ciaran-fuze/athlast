@@ -2515,15 +2515,26 @@ export function RacePageV2({
 
 // --- Message Input ---
 
+// iPhones preview the front camera mirrored but save it un-mirrored; flip it back to match what they saw
+function isIos(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 // Shrink a selfie to a small square before upload
-async function squareThumb(file: File, size = 256): Promise<File> {
+async function squareThumb(file: File, size = 256, mirror = false): Promise<File> {
   try {
     const bmp = await createImageBitmap(file);
     const side = Math.min(bmp.width, bmp.height);
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
-    canvas.getContext("2d")!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+    const ctx = canvas.getContext("2d")!;
+    if (mirror) {
+      ctx.translate(size, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
     return blob ? new File([blob], "selfie.jpg", { type: "image/jpeg" }) : file;
   } catch {
@@ -2592,7 +2603,7 @@ function MessageInput({
     let senderAvatar = avatarUrl;
     if (avatarFile) {
       const formData = new FormData();
-      formData.append("file", await squareThumb(avatarFile));
+      formData.append("file", avatarFile);
       const res = await fetch("/api/race/upload", { method: "POST", body: formData });
       if (res.ok) {
         senderAvatar = (await res.json()).url;
@@ -2717,12 +2728,14 @@ function MessageInput({
               type="file"
               accept="image/*"
               capture="user"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0];
-                if (!f) return;
-                setAvatarFile(f);
-                setAvatarPreview(URL.createObjectURL(f));
                 e.target.value = "";
+                if (!f) return;
+                // Crop (and un-mirror on iPhone) up front so the preview is exactly what gets posted
+                const thumb = await squareThumb(f, 256, isIos());
+                setAvatarFile(thumb);
+                setAvatarPreview(URL.createObjectURL(thumb));
               }}
               style={{ display: "none" }}
             />
