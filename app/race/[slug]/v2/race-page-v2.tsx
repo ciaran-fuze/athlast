@@ -1795,6 +1795,17 @@ export function RacePageV2({
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Selfies from the front camera: keep them the way they looked in the camera on iPhone
+  async function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0];
+    e.target.value = "";
+    if (!raw) return;
+    const file = isIos() && raw.type.startsWith("image/") ? await mirrorPhoto(raw) : raw;
+    setPendingFile(file);
+    setPendingPreview(URL.createObjectURL(file));
+    setInputMode("gallery");
+  }
+
   function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2339,7 +2350,7 @@ export function RacePageV2({
         type="file"
         accept="image/*"
         capture="user"
-        onChange={handleFileCapture}
+        onChange={handleSelfieCapture}
         style={{ display: "none" }}
       />
       <input
@@ -2768,6 +2779,27 @@ export function RacePageV2({
 function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+// Mirror a full selfie photo so it posts the way it looked in the camera
+async function mirrorPhoto(file: File, maxSide = 2048): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
+    return blob ? new File([blob], "selfie.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
 }
 
 // Shrink a selfie to a small square before upload
