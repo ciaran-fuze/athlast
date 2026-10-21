@@ -763,6 +763,40 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
 
 // --- Floating Messages ---
 
+// After the race: every message laid out in full for the athlete to read back
+function MessageList({ messages, onBubbleTap }: { messages: Message[]; onBubbleTap: (msg: Message) => void }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
+      {messages.map((msg) => (
+        <div
+          key={msg.id}
+          onClick={() => onBubbleTap(msg)}
+          style={{
+            background: brand.card,
+            borderRadius: "14px",
+            padding: "0.75rem 0.85rem",
+            border: `1px solid ${brand.border}`,
+            cursor: "pointer",
+          }}
+        >
+          <p style={{ margin: 0, fontFamily: brand.font.body, fontSize: "0.9rem", lineHeight: 1.45, color: brand.dark, whiteSpace: "pre-wrap" }}>
+            {msg.message}
+          </p>
+          <div style={{ marginTop: "0.45rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0, fontFamily: brand.font.body, fontSize: "0.75rem", fontWeight: 600, color: brand.dark }}>
+              <Avatar name={msg.sender_name} url={msg.sender_avatar_url} size={24} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.sender_name}</span>
+            </span>
+            <span suppressHydrationWarning style={{ fontFamily: brand.font.mono, fontSize: "0.55rem", color: brand.muted, flexShrink: 0 }}>
+              {timeAgo(msg.created_at)}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FloatingMessages({
   messages,
   athleteName,
@@ -1024,11 +1058,13 @@ function PhotoGrid({
   photos: supporterPhotos,
   pinned,
   athleteName,
+  expanded,
   onPhotoClick,
   onAddPhoto,
 }: {
   photos: Message[];
   athleteName: string;
+  expanded?: boolean;
   pinned?: Message | null;
   onPhotoClick: (msg: Message) => void;
   onAddPhoto: () => void;
@@ -1053,7 +1089,7 @@ function PhotoGrid({
 
   // Two rows (7 photos + add tile); beyond that a "+N" tile reveals the rest
   const MAX_COLLAPSED = 7;
-  const overflow = showAll ? 0 : Math.max(0, photos.length - MAX_COLLAPSED + 1);
+  const overflow = showAll || expanded ? 0 : Math.max(0, photos.length - MAX_COLLAPSED + 1);
   const visible = overflow > 0 ? photos.slice(0, MAX_COLLAPSED - 1) : photos;
 
   const tileStyle: React.CSSProperties = {
@@ -2079,18 +2115,23 @@ export function RacePageV2({
         <PhotoGrid
           photos={supporterPhotos}
           athleteName={firstName}
+          expanded={status === "finished"}
           pinned={status === "live" ? raceKitPost : null}
           onPhotoClick={(msg) => setLightboxMsg(msg)}
           onAddPhoto={openGallery}
         />
 
         <SectionLabel>Messages of support</SectionLabel>
-        <FloatingMessages
-          messages={supporterMessages}
-          athleteName={firstName}
-          onSendMessage={openMessage}
-          onBubbleTap={(msg) => setLightboxMsg(msg)}
-        />
+        {status === "finished" && supporterMessages.length > 0 ? (
+          <MessageList messages={supporterMessages} onBubbleTap={(msg) => setLightboxMsg(msg)} />
+        ) : (
+          <FloatingMessages
+            messages={supporterMessages}
+            athleteName={firstName}
+            onSendMessage={openMessage}
+            onBubbleTap={(msg) => setLightboxMsg(msg)}
+          />
+        )}
 
         <ActionButtons
           onSelfie={openSelfie}

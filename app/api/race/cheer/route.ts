@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     .select("*")
     .eq("race_id", raceId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(500);
 
   if (athleteId) {
     query = query.eq("athlete_id", athleteId);

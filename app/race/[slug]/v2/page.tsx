@@ -124,7 +124,7 @@ export default async function RacePageV2Route({
     .select("*")
     .eq("race_id", race.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(500);
 
   return (
     <RacePageV2
