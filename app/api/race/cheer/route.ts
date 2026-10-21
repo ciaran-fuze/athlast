@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { race_id, athlete_id, sender_name, message, photo_url, athlete_km_at_send } = body;
+  const { race_id, athlete_id, sender_name, message, photo_url, athlete_km_at_send, sender_avatar_url } = body;
 
   if (!race_id || !athlete_id || !sender_name) {
     return NextResponse.json(
@@ -47,18 +47,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const row: Record<string, unknown> = {
+    race_id,
+    athlete_id,
+    sender_name,
+    message: message || null,
+    photo_url: photo_url || null,
+    athlete_km_at_send: typeof athlete_km_at_send === "number" ? athlete_km_at_send : null,
+  };
+  const avatar = typeof sender_avatar_url === "string" && sender_avatar_url ? sender_avatar_url : null;
+
+  let { data, error } = await supabase
     .from("supporter_messages")
-    .insert({
-      race_id,
-      athlete_id,
-      sender_name,
-      message: message || null,
-      photo_url: photo_url || null,
-      athlete_km_at_send: typeof athlete_km_at_send === "number" ? athlete_km_at_send : null,
-    })
+    .insert(avatar ? { ...row, sender_avatar_url: avatar } : row)
     .select()
     .single();
+
+  // Never lose a message over the avatar (e.g. column not migrated yet)
+  if (error && avatar) {
+    ({ data, error } = await supabase.from("supporter_messages").insert(row).select().single());
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

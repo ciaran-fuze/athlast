@@ -68,6 +68,7 @@ interface Message {
   race_id: string;
   athlete_id: string;
   sender_name: string;
+  sender_avatar_url?: string | null;
   message: string | null;
   photo_url: string | null;
   athlete_km_at_send: number | null;
@@ -435,6 +436,45 @@ function StatusPill({
       }}
     >
       STARTS {startTime ? formatDublinClock(startTime) : "9:00"}
+    </span>
+  );
+}
+
+// --- Supporter Avatar ---
+
+const AVATAR_COLORS = ["#C8871A", "#1C7A4D", "#C24327", "#5B7083", "#8a8070", "#1a1a18"];
+
+// Round selfie, or the sender's initial on a brand colour when they skipped it
+function Avatar({ name, url, size = 22, ring }: { name: string; url?: string | null; size?: number; ring?: string }) {
+  const initial = (name.trim()[0] ?? "?").toUpperCase();
+  let h = 0;
+  for (const c of name.trim().toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const base: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    flexShrink: 0,
+    boxShadow: ring ? `0 0 0 2px ${ring}` : undefined,
+  };
+  if (url) {
+    return <img src={url} alt="" style={{ ...base, objectFit: "cover", display: "block" }} />;
+  }
+  return (
+    <span
+      aria-hidden
+      style={{
+        ...base,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: AVATAR_COLORS[h % AVATAR_COLORS.length],
+        color: "#F3ECDD",
+        fontFamily: brand.font.display,
+        fontSize: size * 0.5,
+        lineHeight: 1,
+      }}
+    >
+      {initial}
     </span>
   );
 }
@@ -932,13 +972,18 @@ function FloatingMessages({
                 >
                   <span
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      minWidth: 0,
                       fontFamily: brand.font.body,
                       fontSize: "0.7rem",
                       fontWeight: 600,
                       color: brand.dark,
                     }}
                   >
-                    {msg.sender_name}
+                    <Avatar name={msg.sender_name} url={msg.sender_avatar_url} size={24} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.sender_name}</span>
                   </span>
                   <span
                     suppressHydrationWarning
@@ -1048,7 +1093,14 @@ function PhotoGrid({
               textOverflow: "ellipsis",
             }}
           >
-            {msg.id === pinned?.id ? "Race kit" : msg.sender_name}
+            {msg.id === pinned?.id ? (
+              "Race kit"
+            ) : (
+              <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                <Avatar name={msg.sender_name} url={msg.sender_avatar_url} size={16} ring="rgba(255,255,255,0.9)" />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{msg.sender_name}</span>
+              </span>
+            )}
           </span>
         </div>
       ))}
@@ -2166,12 +2218,16 @@ export function RacePageV2({
             )}
             <span
               style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
                 fontFamily: brand.font.body,
                 fontSize: "0.9rem",
                 fontWeight: 600,
                 color: brand.muted,
               }}
             >
+              <Avatar name={splashMsg.sender_name} url={splashMsg.sender_avatar_url} size={32} />
               {splashMsg.sender_name}
             </span>
           </div>
@@ -2380,12 +2436,18 @@ export function RacePageV2({
               <div style={{ marginTop: "1rem", textAlign: "center" }}>
                 <span
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
                     fontFamily: brand.font.body,
                     fontSize: "0.95rem",
                     fontWeight: 600,
                     color: "#fff",
                   }}
                 >
+                  {!lightboxMsg.is_athlete_post && (
+                    <Avatar name={lightboxMsg.sender_name} url={lightboxMsg.sender_avatar_url} size={30} />
+                  )}
                   {lightboxMsg.sender_name}
                 </span>
                 {lightboxMsg.message && (
@@ -2431,12 +2493,16 @@ export function RacePageV2({
               </p>
               <span
                 style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
                   fontFamily: brand.font.body,
                   fontSize: "0.9rem",
                   fontWeight: 600,
                   color: brand.muted,
                 }}
               >
+                <Avatar name={lightboxMsg.sender_name} url={lightboxMsg.sender_avatar_url} size={30} />
                 {lightboxMsg.sender_name}
               </span>
             </div>
@@ -2448,6 +2514,22 @@ export function RacePageV2({
 }
 
 // --- Message Input ---
+
+// Shrink a selfie to a small square before upload
+async function squareThumb(file: File, size = 256): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const side = Math.min(bmp.width, bmp.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    canvas.getContext("2d")!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+    return blob ? new File([blob], "selfie.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
 
 function MessageInput({
   raceId,
@@ -2480,6 +2562,14 @@ function MessageInput({
   const [sending, setSending] = useState(false);
   const [nameMissing, setNameMissing] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  // Optional selfie, remembered on this phone like the name
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("athlast_avatar");
+    return null;
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const selfieRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -2498,6 +2588,19 @@ function MessageInput({
       localStorage.setItem("athlast_name", senderName);
     }
     setHasName(true);
+
+    let senderAvatar = avatarUrl;
+    if (avatarFile) {
+      const formData = new FormData();
+      formData.append("file", await squareThumb(avatarFile));
+      const res = await fetch("/api/race/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        senderAvatar = (await res.json()).url;
+        setAvatarUrl(senderAvatar);
+        setAvatarFile(null);
+        localStorage.setItem("athlast_avatar", senderAvatar!);
+      }
+    }
 
     let photoUrl: string | null = null;
     if (photo) {
@@ -2520,6 +2623,7 @@ function MessageInput({
         race_id: raceId,
         athlete_id: athleteId,
         sender_name: senderName,
+        sender_avatar_url: senderAvatar,
         message: message.trim() || null,
         photo_url: photoUrl,
         athlete_km_at_send: athleteKm,
@@ -2550,27 +2654,79 @@ function MessageInput({
         style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}
       >
         {!hasName && (
-          <input
-            ref={nameRef}
-            type="text"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (e.target.value.trim()) setNameMissing(false);
-            }}
-            className={nameMissing ? "name-shake" : undefined}
-            style={{
-              padding: "0.5rem 0.75rem",
-              border: `1.5px solid ${nameMissing ? brand.behind : brand.border}`,
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontFamily: brand.font.body,
-              outline: "none",
-              background: brand.bg,
-              color: brand.dark,
-            }}
-          />
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => selfieRef.current?.click()}
+                aria-label={avatarPreview || avatarUrl ? "Retake selfie" : "Add a selfie"}
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  padding: 0,
+                  overflow: "hidden",
+                  border: avatarPreview || avatarUrl ? "none" : `1.5px dashed ${brand.muted}`,
+                  background: brand.bg,
+                  color: brand.muted,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                {avatarPreview || avatarUrl ? (
+                  <img src={(avatarPreview || avatarUrl)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 8h3l2-3h6l2 3h3v11H4V8Z" />
+                    <circle cx="12" cy="13" r="3.5" />
+                  </svg>
+                )}
+              </button>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <input
+                  ref={nameRef}
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (e.target.value.trim()) setNameMissing(false);
+                  }}
+                  className={nameMissing ? "name-shake" : undefined}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    border: `1.5px solid ${nameMissing ? brand.behind : brand.border}`,
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontFamily: brand.font.body,
+                    outline: "none",
+                    background: brand.bg,
+                    color: brand.dark,
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ fontFamily: brand.font.body, fontSize: "0.7rem", color: brand.muted, paddingLeft: "0.25rem" }}>
+              {avatarPreview || avatarUrl ? "Looking good. Tap to retake." : "Tap the circle to add a selfie (optional)"}
+            </div>
+            <input
+              ref={selfieRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setAvatarFile(f);
+                setAvatarPreview(URL.createObjectURL(f));
+                e.target.value = "";
+              }}
+              style={{ display: "none" }}
+            />
+          </>
         )}
         {nameMissing && (
           <div style={{ fontFamily: brand.font.body, fontSize: "0.8rem", color: brand.behind, paddingLeft: "0.25rem", marginTop: "-0.15rem" }}>
@@ -2681,7 +2837,9 @@ function MessageInput({
               paddingLeft: "0.25rem",
             }}
           >
-            Sending as {name}{" "}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", verticalAlign: "middle" }}>
+              Sending as <Avatar name={name} url={avatarPreview || avatarUrl} size={16} /> {name}
+            </span>{" "}
             <span
               onClick={() => setHasName(false)}
               style={{ textDecoration: "underline", cursor: "pointer" }}
