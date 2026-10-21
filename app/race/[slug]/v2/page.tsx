@@ -9,10 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function RacePageV2Route({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ speed?: string }>;
 }) {
   const { slug } = await params;
+  const { speed } = await searchParams;
 
   const { data: race } = await supabase
     .from("races")
@@ -35,8 +38,9 @@ export default async function RacePageV2Route({
       { Name: "Startline", Exists: true, TOD: "08:30:04", Gun: "00:00", Chip: "00:04", RO: 4832, RG: 2201, RA: 412, ROM: 13200, RGM: 6800, RAM: 1100 },
       { Name: "5K", Exists: true, TOD: "08:54:36", Gun: "24:36", Chip: "24:32", Sector: "24:28", Speed: "4:53 min/km", RO: 3912, RG: 1804, RA: 338, ROM: 13100, RGM: 6750, RAM: 1090 },
       { Name: "10K", Exists: true, TOD: "09:18:48", Gun: "48:48", Chip: "48:44", Sector: "24:12", Speed: "4:50 min/km", RO: 3640, RG: 1690, RA: 310, ROM: 12900, RGM: 6700, RAM: 1080 },
-      { Name: "15K", Exists: false },
-      { Name: "Finishline", Exists: false },
+      { Name: "15K", Exists: true, TOD: "09:43:10", Chip: "1:13:06", Speed: "4:52 min/km" },
+      { Name: "20K", Exists: true, TOD: "10:07:28", Chip: "1:37:24", Speed: "4:52 min/km" },
+      { Name: "Finishline", Exists: true, TOD: "10:12:22", Chip: "1:42:18", Speed: "4:51 min/km" },
     ];
     for (const ra of raceAthletes) {
       initialSplits[ra.athlete_id] = mockSplits;
@@ -123,6 +127,11 @@ export default async function RacePageV2Route({
       initialMessages={messages ?? []}
       initialFundraising={fundraising}
       demoElapsedSeconds={slug === "phil-dublin-half" ? 62 * 60 : undefined}
+      demoLoop={
+        slug === "dublin-half-2026-live"
+          ? { fromSec: 25 * 60, toSec: 102 * 60, speed: Math.min(Math.max(Number(speed) || 1, 1), 60) }
+          : undefined
+      }
     />
   );
 }

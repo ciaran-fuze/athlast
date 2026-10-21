@@ -1410,7 +1410,8 @@ export function RacePageV2({
   raceAthletes,
   initialSplits,
   initialMessages,
-  demoElapsedSeconds,
+  demoElapsedSeconds: fixedDemoSeconds,
+  demoLoop,
   initialFundraising,
 }: {
   race: Race;
@@ -1418,6 +1419,7 @@ export function RacePageV2({
   initialSplits: Record<string, Split[]>;
   initialMessages: Message[];
   demoElapsedSeconds?: number;
+  demoLoop?: { fromSec: number; toSec: number; speed: number };
   initialFundraising?: FundraisingProgress | null;
 }) {
   const [splits, setSplits] = useState(initialSplits);
@@ -1530,13 +1532,23 @@ export function RacePageV2({
   }, [fundraisingRaId]);
 
   // Client clock for projecting RTRT runners between timing mats
+  const demoSpeed = demoLoop?.speed ?? 1;
   const [nowMs, setNowMs] = useState<number | null>(null);
   useEffect(() => {
     const tick = () => setNowMs(Date.now());
     tick();
-    const t = setInterval(tick, 5000);
+    const t = setInterval(tick, demoSpeed > 1 ? 1000 : 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [demoSpeed]);
+
+  // Looping demo: replay the race on the wall clock so everyone sees the same moment
+  const demoElapsedSeconds =
+    fixedDemoSeconds ??
+    (demoLoop
+      ? demoLoop.fromSec +
+        (nowMs === null ? 0 : ((nowMs / 1000) * demoLoop.speed) % (demoLoop.toSec - demoLoop.fromSec))
+      : undefined);
+  const isDemo = demoElapsedSeconds !== undefined;
 
   // Derived data
   const athlete = raceAthletes.find((ra) => ra.athlete_id === selectedAthlete);
@@ -1596,14 +1608,14 @@ export function RacePageV2({
     if (!shouldPoll) return;
     const first = isRtrt ? setTimeout(pollSplits, 0) : undefined;
     const interval = setInterval(() => {
-      if (!demoElapsedSeconds) pollSplits();
+      if (!isDemo) pollSplits();
       pollMessages();
     }, 30000);
     return () => {
       clearTimeout(first);
       clearInterval(interval);
     };
-  }, [shouldPoll, isRtrt, pollSplits, pollMessages, demoElapsedSeconds]);
+  }, [shouldPoll, isRtrt, pollSplits, pollMessages, isDemo]);
 
   const estimatedKm = (() => {
     if (demoKm !== null) return Math.round(demoKm * 10) / 10;
