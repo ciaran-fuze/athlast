@@ -11,7 +11,7 @@ const colors = {
   muted: "#8a8070",
   border: "#e0d9cc",
   goal: "#C8871A",
-  todo: "#b3a993",
+  todo: "#a8916a",
 };
 
 // Route points are evenly spaced along the course, so km maps straight onto an index
@@ -74,7 +74,9 @@ export function CourseMap({
 
       const { runnerKm: rKm, goalKm: gKm } = latest.current;
       const parts = splitRoute(route, rKm, distanceKm);
-      const todo = L.polyline(parts.todo, { color: colors.todo, weight: 3, dashArray: "4 6", lineCap: "round" }).addTo(map);
+      // Light casing under the whole route so it stands out from the streets
+      L.polyline(route, { color: colors.card, weight: 9, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }).addTo(map);
+      const todo = L.polyline(parts.todo, { color: colors.todo, weight: 5, lineCap: "round", lineJoin: "round" }).addTo(map);
       const done = L.polyline(parts.done, { color: colors.dark, weight: 4, lineCap: "round", lineJoin: "round" }).addTo(map);
       L.circleMarker(route[0], { radius: 4, color: colors.dark, weight: 2, fillColor: colors.card, fillOpacity: 1 })
         .bindTooltip("Start / Finish", { permanent: false })
