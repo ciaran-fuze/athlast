@@ -570,13 +570,13 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
 
 // --- Floating Add Button ---
 
-function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
+function FloatingAddButton({ onCamera, onGallery, onMessage }: { onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
   const items: { label: string; onClick: () => void }[] = [
     { label: "Message", onClick: onMessage },
-    { label: "Gallery", onClick: onGallery },
-    { label: "Selfie", onClick: onSelfie },
+    { label: "Take photo", onClick: onCamera },
+    { label: "Photo library", onClick: onGallery },
   ];
 
   return (
@@ -1757,6 +1757,7 @@ export function RacePageV2({
   const [showSplits, setShowSplits] = useState(false);
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -2020,6 +2021,7 @@ export function RacePageV2({
 
   const openSelfie = () => selfieInputRef.current?.click();
   const openGallery = () => galleryInputRef.current?.click();
+  const openCamera = () => cameraInputRef.current?.click();
   const openMessage = () => setInputMode("message");
 
   return (
@@ -2288,7 +2290,7 @@ export function RacePageV2({
 
       {!inputMode && !lightboxMsg && !showSplits && !splashMsg && !sheet && !showMap && (
         <FloatingAddButton
-          onSelfie={openSelfie}
+          onCamera={openCamera}
           onGallery={openGallery}
           onMessage={openMessage}
         />
@@ -2300,6 +2302,15 @@ export function RacePageV2({
         type="file"
         accept="image/*"
         capture="user"
+        onChange={handleFileCapture}
+        style={{ display: "none" }}
+      />
+      {/* Straight to the back camera */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileCapture}
         style={{ display: "none" }}
       />
