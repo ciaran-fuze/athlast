@@ -626,38 +626,42 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
   const hasProgress = data.raised !== null && data.target !== null && data.target > 0;
   const pct = hasProgress ? Math.round((data.raised! / data.target!) * 100) : 0;
   const money = (n: number) => `${data.currency}${n.toLocaleString("en-IE")}`;
+  // "Grow Mental Health (Grow in Ireland)" -> "Grow Mental Health"
+  const charity = data.charity?.replace(/\s*\(.*\)\s*$/, "");
 
   return (
     <div
       style={{
         marginTop: "1rem",
-        padding: "0.9rem 1rem",
+        padding: "0.65rem 0.75rem 0.7rem 0.9rem",
         background: brand.card,
         border: `1px solid ${brand.border}`,
         borderRadius: "14px",
       }}
     >
-      <div
-        style={{
-          fontFamily: brand.font.mono,
-          fontSize: "0.6rem",
-          letterSpacing: "0.1em",
-          color: brand.muted,
-          textTransform: "uppercase",
-          marginBottom: "0.5rem",
-        }}
-      >
-        {data.charity ? `Raising for ${data.charity}` : `${athleteName || "The athlete"} is fundraising`}
-      </div>
-
-      {hasProgress && (
-        <>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem" }}>
-            <div style={{ fontFamily: brand.font.body, fontSize: "0.85rem", color: brand.muted }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: brand.font.mono,
+              fontSize: "0.55rem",
+              letterSpacing: "0.08em",
+              color: brand.muted,
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              {charity ? `Raising for ${charity}` : `${athleteName || "The athlete"} is fundraising`}
+            </span>
+          </div>
+          {hasProgress && (
+            <div style={{ fontFamily: brand.font.body, fontSize: "0.75rem", color: brand.muted, marginTop: "0.1rem", whiteSpace: "nowrap" }}>
               <span
                 style={{
                   fontFamily: brand.font.display,
-                  fontSize: "1.6rem",
+                  fontSize: "1.15rem",
                   fontWeight: 600,
                   color: brand.dark,
                   fontVariantNumeric: "tabular-nums",
@@ -665,56 +669,50 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
               >
                 {money(data.raised!)}
               </span>{" "}
-              raised of {money(data.target!)}
+              of {money(data.target!)}
+              <span style={{ fontFamily: brand.font.mono, fontWeight: 600, color: pct >= 100 ? brand.go : brand.dark }}> · {pct}%</span>
             </div>
-            <span
-              style={{
-                fontFamily: brand.font.mono,
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: pct >= 100 ? brand.go : brand.dark,
-              }}
-            >
-              {pct}%
+          )}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem", flexShrink: 0 }}>
+          <a
+            href={data.donateUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: "0.5rem 0.95rem",
+              background: brand.dark,
+              color: "#F3ECDD",
+              borderRadius: "10px",
+              fontFamily: brand.font.body,
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Donate
+          </a>
+          {data.supporters !== null && (
+            <span style={{ fontFamily: brand.font.mono, fontSize: "0.5rem", color: brand.muted, whiteSpace: "nowrap" }}>
+              {data.supporters} supporters
             </span>
-          </div>
-          <div style={{ height: 6, background: brand.border, borderRadius: 3, overflow: "hidden", margin: "0.5rem 0 0.75rem" }}>
-            <div
-              style={{
-                width: `${Math.min(pct, 100)}%`,
-                height: "100%",
-                background: brand.go,
-                borderRadius: 3,
-                transition: "width 1s ease-out",
-              }}
-            />
-          </div>
-        </>
-      )}
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
-        <span style={{ fontFamily: brand.font.mono, fontSize: "0.65rem", color: brand.muted }}>
-          {data.supporters !== null ? `${data.supporters} supporters` : ""}
-        </span>
-        <a
-          href={data.donateUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            padding: "0.6rem 1.2rem",
-            background: brand.dark,
-            color: "#F3ECDD",
-            borderRadius: "11px",
-            fontFamily: brand.font.body,
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Donate
-        </a>
+          )}
+        </div>
       </div>
+      {hasProgress && (
+        <div style={{ height: 4, background: brand.border, borderRadius: 2, overflow: "hidden", marginTop: "0.5rem" }}>
+          <div
+            style={{
+              width: `${Math.min(pct, 100)}%`,
+              height: "100%",
+              background: brand.go,
+              borderRadius: 2,
+              transition: "width 1s ease-out",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
