@@ -81,6 +81,13 @@ export default async function RacePageV2Route({
     }
   }
 
+  // Marathon demo: a full set of splits, replayed on the looping demo clock
+  if (slug === "marathon-demo" && raceAthletes) {
+    const chips = [["5K", "24:20"], ["10K", "48:45"], ["15K", "1:13:20"], ["20K", "1:38:05"], ["25K", "2:03:00"], ["30K", "2:28:10"], ["35K", "2:53:50"], ["40K", "3:19:40"], ["Finishline", "3:30:55"]];
+    const mock: Split[] = [{ Name: "Startline", Exists: true, Chip: "00:00" }, ...chips.map(([Name, Chip]) => ({ Name, Exists: true, Chip }))];
+    for (const ra of raceAthletes) initialSplits[ra.athlete_id] = mock;
+  }
+
   // Finished demo: fall back to mock results if Race Result no longer serves the event
   if (slug === "dublin-half-2026" && raceAthletes) {
     const mockFinished: Split[] = [
@@ -130,7 +137,9 @@ export default async function RacePageV2Route({
       demoLoop={
         slug === "dublin-half-2026-live"
           ? { fromSec: 25 * 60, toSec: 102 * 60, speed: Math.min(Math.max(Number(speed) || 1, 1), 60) }
-          : undefined
+          : slug === "marathon-demo"
+            ? { fromSec: 25 * 60, toSec: 209 * 60, speed: Math.min(Math.max(Number(speed) || 1, 1), 60) }
+            : undefined
       }
     />
   );

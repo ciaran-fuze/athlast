@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Split } from "@/lib/raceresult";
 import { rtrtToSplits } from "@/lib/rtrt-splits";
 import type { FundraisingProgress } from "@/lib/fundraising";
+import { CourseMap } from "./course-map";
 
 const brand = {
   bg: "#F5F0E8",
@@ -39,6 +40,7 @@ interface Race {
     fill_path: string;
     labels: string[];
     context?: string;
+    route?: [number, number][];
   } | null;
 }
 
@@ -1109,12 +1111,14 @@ function CourseTracker({
   runnerKm,
   athleteName,
   ghost,
+  onOpenMap,
 }: {
   profile: Race["elevation_profile"];
   distanceKm: number;
   runnerKm: number;
   athleteName: string;
   ghost: { offsetKm: number; deltaSec: number; goalTime: string } | null;
+  onOpenMap?: () => void;
 }) {
   const course = profile ?? FLAT_COURSE;
   const height = profile ? 74 : 30;
@@ -1177,7 +1181,34 @@ function CourseTracker({
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
-    <div style={{ marginTop: "0.25rem" }}>
+    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: onOpenMap && !ghost ? 36 : 0 }}>
+      {onOpenMap && (
+        <button
+          onClick={onOpenMap}
+          aria-label="Open course map"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 2,
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            border: `1px solid ${brand.border}`,
+            background: brand.card,
+            color: brand.dark,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
+            <path d="M9 4v13.5M15 6.5V20" />
+          </svg>
+        </button>
+      )}
       {ghost && (
         <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
           <div
@@ -1531,6 +1562,8 @@ export function RacePageV2({
     return () => clearInterval(t);
   }, [fundraisingRaId]);
 
+  const [showMap, setShowMap] = useState(false);
+
   // Client clock for projecting RTRT runners between timing mats
   const demoSpeed = demoLoop?.speed ?? 1;
   const [nowMs, setNowMs] = useState<number | null>(null);
@@ -1825,8 +1858,20 @@ export function RacePageV2({
               runnerKm={(runnerPct / 100) * race.distance_km}
               athleteName={firstName}
               ghost={ghost}
+              onOpenMap={race.elevation_profile?.route ? () => setShowMap(true) : undefined}
             />
           </>
+        )}
+
+        {showMap && status === "live" && race.elevation_profile?.route && (
+          <CourseMap
+            route={race.elevation_profile.route}
+            distanceKm={race.distance_km}
+            runnerKm={(runnerPct / 100) * race.distance_km}
+            goalKm={ghost ? (runnerPct / 100) * race.distance_km + ghost.offsetKm : null}
+            athleteName={firstName}
+            onClose={() => setShowMap(false)}
+          />
         )}
 
         {/* ===================== AFTER ===================== */}
