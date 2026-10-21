@@ -1101,21 +1101,22 @@ function formatGap(s: number): string {
   return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
+const WINDOW_KM = 2;
+
 function CourseTracker({
   profile,
   distanceKm,
-  progressPct,
+  runnerKm,
   athleteName,
   ghost,
 }: {
   profile: Race["elevation_profile"];
   distanceKm: number;
-  progressPct: number;
+  runnerKm: number;
   athleteName: string;
-  ghost: { pct: number; deltaSec: number; goalTime: string } | null;
+  ghost: { offsetKm: number; deltaSec: number; goalTime: string } | null;
 }) {
   const course = profile ?? FLAT_COURSE;
-  const labels = profile?.labels ?? ["0km", `${distanceKm}km`];
   const height = profile ? 74 : 30;
 
   const points = course.path
@@ -1125,21 +1126,41 @@ function CourseTracker({
     .map((p) => p.split(",").map(Number))
     .filter((p) => p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]));
 
-  function topPctAt(pct: number): number {
-    const x = (pct / 100) * 300;
-    let y = 37;
-    if (points.length >= 2) {
-      for (let i = 0; i < points.length - 1; i++) {
-        if (x >= points[i][0] && x <= points[i + 1][0]) {
-          const t = (x - points[i][0]) / (points[i + 1][0] - points[i][0] || 1);
-          y = points[i][1] + t * (points[i + 1][1] - points[i][1]);
-          break;
-        }
+  // Profile x runs 0–300 across the whole course
+  const unitsPerKm = 300 / distanceKm;
+  function yAtKm(km: number): number {
+    const x = km * unitsPerKm;
+    if (points.length < 2) return 37;
+    if (x <= points[0][0]) return points[0][1];
+    for (let i = 0; i < points.length - 1; i++) {
+      if (x >= points[i][0] && x <= points[i + 1][0]) {
+        const t = (x - points[i][0]) / (points[i + 1][0] - points[i][0] || 1);
+        return points[i][1] + t * (points[i + 1][1] - points[i][1]);
       }
-      if (x >= points[points.length - 1][0]) y = points[points.length - 1][1];
     }
-    return (y / 74) * 100;
+    return points[points.length - 1][1];
   }
+
+  // Zoomed window that follows the runner, kept inside the course
+  const windowKm = Math.min(WINDOW_KM, distanceKm);
+  const startKm = Math.min(Math.max(runnerKm - windowKm / 2, 0), distanceKm - windowKm);
+  const endKm = startKm + windowKm;
+  const pctAt = (km: number) => ((km - startKm) / windowKm) * 100;
+
+  // Fit the vertical scale to the elevation inside the window
+  const ys = [yAtKm(startKm), yAtKm(endKm), ...points.filter((p) => p[0] >= startKm * unitsPerKm && p[0] <= endKm * unitsPerKm).map((p) => p[1])];
+  const mid = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const span = Math.max(Math.max(...ys) - Math.min(...ys), 14) * 1.6;
+  const yMin = mid - span / 2;
+  const topPctAt = (km: number) => ((yAtKm(km) - yMin) / span) * 100;
+
+  const kmTicks: number[] = [];
+  for (let k = Math.ceil(startKm * 2) / 2; k <= endKm + 1e-6; k += 0.5) kmTicks.push(k);
+
+  // Goal sits at its true distance; if it's off the window, pin it to the edge with a badge
+  const goalKm = ghost ? runnerKm + ghost.offsetKm : null;
+  const goalOff = goalKm !== null && (goalKm < startKm || goalKm > endKm);
+  const goalShownKm = goalKm === null ? 0 : Math.min(Math.max(goalKm, startKm), endKm);
 
   const dotLabel: React.CSSProperties = {
     position: "absolute",
@@ -1152,7 +1173,7 @@ function CourseTracker({
     textTransform: "uppercase",
   };
 
-  const showRunner = progressPct > 0;
+  const showRunner = runnerKm > 0;
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
@@ -1186,11 +1207,11 @@ function CourseTracker({
           </div>
         </div>
       )}
-      <div style={{ position: "relative", height, margin: "0.6rem 0" }}>
+      <div style={{ position: "relative", height, margin: "0.6rem 0 0" }}>
         <svg
-          viewBox="0 0 300 74"
+          viewBox={`${(startKm * unitsPerKm).toFixed(2)} ${yMin.toFixed(2)} ${(windowKm * unitsPerKm).toFixed(2)} ${span.toFixed(2)}`}
           preserveAspectRatio="none"
-          style={{ width: "100%", height: "100%", display: "block", overflow: "visible" }}
+          style={{ width: "100%", height: "100%", display: "block", overflow: "hidden" }}
         >
           {course.fill_path && <path d={course.fill_path} fill="rgba(28,24,19,0.07)" />}
           <path
@@ -1203,13 +1224,13 @@ function CourseTracker({
           />
         </svg>
 
-        {/* Ghost — where the goal pace would be right now */}
+        {/* Goal — where goal pace would be right now */}
         {ghost && showRunner && (
           <div
             style={{
               position: "absolute",
-              left: `${ghost.pct}%`,
-              top: `${topPctAt(ghost.pct)}%`,
+              left: `${pctAt(goalShownKm).toFixed(2)}%`,
+              top: `${topPctAt(goalShownKm).toFixed(2)}%`,
               width: 13,
               height: 13,
               borderRadius: "50%",
@@ -1221,7 +1242,21 @@ function CourseTracker({
             }}
           >
             <span className="dot-pulse" style={{ position: "absolute", inset: -3, borderRadius: "50%", background: brand.goal }} />
-            <span style={{ ...dotLabel, top: 16, color: brand.goal, fontWeight: 600, fontSize: "0.55rem" }}>Goal</span>
+            <span
+              style={{
+                ...dotLabel,
+                top: 16,
+                color: goalOff ? brand.card : brand.goal,
+                background: goalOff ? brand.goal : "transparent",
+                padding: goalOff ? "1px 5px" : 0,
+                borderRadius: 999,
+                fontWeight: 600,
+                fontSize: "0.55rem",
+                ...(goalOff ? { left: goalKm! > endKm ? "auto" : 0, right: goalKm! > endKm ? 0 : "auto", transform: "none" } : {}),
+              }}
+            >
+              {goalOff ? `Goal ${ghost.offsetKm > 0 ? "+" : "−"}${Math.abs(ghost.offsetKm).toFixed(1)}km` : "Goal"}
+            </span>
           </div>
         )}
 
@@ -1229,8 +1264,8 @@ function CourseTracker({
           <div
             style={{
               position: "absolute",
-              left: `${progressPct}%`,
-              top: `${topPctAt(progressPct)}%`,
+              left: `${pctAt(runnerKm).toFixed(2)}%`,
+              top: `${topPctAt(runnerKm).toFixed(2)}%`,
               width: 13,
               height: 13,
               borderRadius: "50%",
@@ -1247,20 +1282,29 @@ function CourseTracker({
           </div>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontFamily: brand.font.mono,
-          fontSize: "0.5rem",
-          color: brand.muted,
-        }}
-      >
-        {labels.map((label, i) => (
-          <span key={i}>{label}</span>
+
+      {/* Km markers scroll with the window */}
+      <div style={{ position: "relative", height: 22, borderTop: `1px solid ${brand.border}` }}>
+        {kmTicks.map((k) => (
+          <div
+            key={k}
+            style={{
+              position: "absolute",
+              left: `${pctAt(k).toFixed(2)}%`,
+              top: 0,
+              transform: pctAt(k) > 95 ? "translateX(-100%)" : pctAt(k) < 5 ? "none" : "translateX(-50%)",
+              alignItems: pctAt(k) > 95 ? "flex-end" : pctAt(k) < 5 ? "flex-start" : "center",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <span style={{ width: 1, height: 5, background: brand.muted }} />
+            <span style={{ fontFamily: brand.font.mono, fontSize: "0.5rem", color: brand.muted, marginTop: 2 }}>
+              {Number.isInteger(k) ? k : k.toFixed(1)}km
+            </span>
+          </div>
         ))}
       </div>
-
     </div>
   );
 }
@@ -1599,14 +1643,11 @@ export function RacePageV2({
     if (!goalSec || lastKm === null || !last.Chip) return null;
     const t = parseTimeToSeconds(last.Chip);
     const ghostKm = Math.min(race.distance_km, (t / goalSec) * race.distance_km);
-    // Real gaps are tiny on a full-course line, so exaggerate the spacing (min 8%, max 25%)
-    const gapPct = ((ghostKm - lastKm) / race.distance_km) * 100;
-    const visualGap = Math.sign(gapPct || -1) * Math.min(25, Math.max(8, Math.abs(gapPct) * 8));
-    const pct = Math.min(100, Math.max(0, runnerPct + visualGap));
+    const offsetKm = ghostKm - lastKm; // positive = goal is ahead of the runner
     const deltaSec = Math.round((goalSec * lastKm) / race.distance_km - t); // positive = ahead of the ghost
     const parts = goalTime.split(":");
     const goalLabel = parts.length === 3 && parts[2] === "00" ? `${parts[0]}:${parts[1]}` : goalTime;
-    return { pct, deltaSec, goalTime: goalLabel };
+    return { offsetKm, deltaSec, goalTime: goalLabel };
   })();
 
   // Newest first everywhere: after the race the congratulations lead, drifting back to the pre-race messages
@@ -1769,7 +1810,7 @@ export function RacePageV2({
             <CourseTracker
               profile={race.elevation_profile}
               distanceKm={race.distance_km}
-              progressPct={runnerPct}
+              runnerKm={(runnerPct / 100) * race.distance_km}
               athleteName={firstName}
               ghost={ghost}
             />
