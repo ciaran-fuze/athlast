@@ -778,10 +778,16 @@ function FloatingMessages({
   const animRef = useRef<number | null>(null);
   const userTouchRef = useRef(false);
   const scrollPos = useRef(0);
+  const scrollDir = useRef(1);
 
   const BUBBLE_SPACE = 190;
   const PADDING = 30;
   const fieldWidth = PADDING + Math.max(messages.length * BUBBLE_SPACE, 350) + PADDING;
+
+  // One or two messages sit on screen without scrolling
+  const fits = messages.length <= 2;
+  const fitWidth = messages.length === 1 ? "180px" : "min(180px, calc(50% - 21px))";
+  const fitLeft = messages.length === 1 ? ["calc(50% - 90px)"] : ["14px", `calc(100% - 14px - ${fitWidth})`];
 
   const bubbleX = messages.map((_, i) => {
     const base = PADDING + (i / Math.max(messages.length - 1, 1)) * (fieldWidth - PADDING * 2 - 180) + 90;
@@ -807,11 +813,16 @@ function FloatingMessages({
     const speed = 0.5;
 
     function tick() {
-      if (!userTouchRef.current && el) {
-        scrollPos.current += speed;
-        const maxScroll = el.scrollWidth - el.clientWidth;
-        if (maxScroll > 0 && scrollPos.current >= maxScroll) {
+      const maxScroll = el ? el.scrollWidth - el.clientWidth : 0;
+      // Only drift when there's a real row to move through; glide back and forth rather than snapping to the start
+      if (!userTouchRef.current && el && maxScroll > 150) {
+        scrollPos.current += speed * scrollDir.current;
+        if (scrollPos.current >= maxScroll) {
+          scrollPos.current = maxScroll;
+          scrollDir.current = -1;
+        } else if (scrollPos.current <= 0) {
           scrollPos.current = 0;
+          scrollDir.current = 1;
         }
         el.scrollLeft = scrollPos.current;
       } else if (el) {
@@ -829,6 +840,7 @@ function FloatingMessages({
   const frontId = messages[0]?.id;
   useEffect(() => {
     scrollPos.current = 0;
+    scrollDir.current = 1;
     if (scrollRef.current) scrollRef.current.scrollLeft = 0;
   }, [frontId]);
 
@@ -894,7 +906,7 @@ function FloatingMessages({
           letterSpacing: "0.05em",
         }}
       >
-        {messages.length} messages
+        {messages.length} {messages.length === 1 ? "message" : "messages"}
       </div>
       <div
         ref={scrollRef}
@@ -911,7 +923,7 @@ function FloatingMessages({
         <div
           style={{
             position: "relative",
-            width: fieldWidth,
+            width: fits ? "100%" : fieldWidth,
             height: "100%",
           }}
         >
@@ -926,9 +938,9 @@ function FloatingMessages({
               onClick={() => onBubbleTap(msg)}
               style={{
                 position: "absolute",
-                left: bubbleX[i],
-                top: bubbleY[i],
-                width: 180,
+                left: fits ? fitLeft[i] : bubbleX[i],
+                top: fits ? [20, 95][i] : bubbleY[i],
+                width: fits ? fitWidth : 180,
                 transform: `rotate(${rotate}deg)`,
                 transformOrigin: "center center",
                 cursor: "pointer",
