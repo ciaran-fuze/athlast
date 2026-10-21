@@ -573,38 +573,10 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
 function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
-  const icon = (d: React.ReactNode) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {d}
-    </svg>
-  );
-  const items: { label: string; onClick: () => void; icon: React.ReactNode }[] = [
-    {
-      label: "Selfie",
-      onClick: onSelfie,
-      icon: icon(
-        <>
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </>
-      ),
-    },
-    {
-      label: "Gallery",
-      onClick: onGallery,
-      icon: icon(
-        <>
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </>
-      ),
-    },
-    {
-      label: "Message",
-      onClick: onMessage,
-      icon: icon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
-    },
+  const items: { label: string; onClick: () => void }[] = [
+    { label: "Selfie", onClick: onSelfie },
+    { label: "Gallery", onClick: onGallery },
+    { label: "Message", onClick: onMessage },
   ];
 
   return (
@@ -638,25 +610,20 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
                 item.onClick();
               }}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                minWidth: 176,
-                minHeight: 54,
-                padding: "0 1.25rem",
+                minHeight: 46,
+                padding: "0 1.35rem",
                 background: brand.dark,
                 color: "#F3ECDD",
                 border: "none",
-                borderRadius: "16px",
+                borderRadius: "23px",
                 fontFamily: brand.font.body,
-                fontSize: "1rem",
+                fontSize: "0.95rem",
                 fontWeight: 500,
                 cursor: "pointer",
                 boxShadow: "0 4px 14px rgba(26,26,24,0.15)",
                 animation: `fadeInUp 0.2s ease-out ${(items.length - 1 - i) * 0.04}s both`,
               }}
             >
-              {item.icon}
               {item.label}
             </button>
           ))}
