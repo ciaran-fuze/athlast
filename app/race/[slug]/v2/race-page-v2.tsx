@@ -573,10 +573,38 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
 function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
-  const items: { label: string; onClick: () => void }[] = [
-    { label: "Selfie", onClick: onSelfie },
-    { label: "Gallery", onClick: onGallery },
-    { label: "Message", onClick: onMessage },
+  const icon = (d: React.ReactNode) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {d}
+    </svg>
+  );
+  const items: { label: string; onClick: () => void; icon: React.ReactNode }[] = [
+    {
+      label: "Selfie",
+      onClick: onSelfie,
+      icon: icon(
+        <>
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </>
+      ),
+    },
+    {
+      label: "Gallery",
+      onClick: onGallery,
+      icon: icon(
+        <>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </>
+      ),
+    },
+    {
+      label: "Message",
+      onClick: onMessage,
+      icon: icon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />),
+    },
   ];
 
   return (
@@ -591,7 +619,8 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
         style={{
           position: "fixed",
           right: "max(1rem, calc(50vw - 240px + 1rem))",
-          bottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+          // Kept clear of the bottom edge, where iOS Safari swallows taps to show its toolbar
+          bottom: "calc(2.25rem + env(safe-area-inset-bottom))",
           zIndex: 90,
           display: "flex",
           flexDirection: "column",
@@ -603,33 +632,41 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
           items.map((item, i) => (
             <button
               key={item.label}
+              className="tap-press"
               onClick={() => {
                 setOpen(false);
                 item.onClick();
               }}
               style={{
-                padding: "0.55rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                minWidth: 176,
+                minHeight: 54,
+                padding: "0 1.25rem",
                 background: brand.card,
                 color: brand.dark,
                 border: `1px solid ${brand.border}`,
-                borderRadius: "20px",
+                borderRadius: "16px",
                 fontFamily: brand.font.body,
-                fontSize: "0.85rem",
+                fontSize: "1rem",
                 fontWeight: 500,
                 cursor: "pointer",
                 boxShadow: "0 4px 14px rgba(26,26,24,0.15)",
                 animation: `fadeInUp 0.2s ease-out ${(items.length - 1 - i) * 0.04}s both`,
               }}
             >
+              {item.icon}
               {item.label}
             </button>
           ))}
         <button
           aria-label={open ? "Close" : "Add support"}
           onClick={() => setOpen((o) => !o)}
+          className="tap-press"
           style={{
-            width: 54,
-            height: 54,
+            width: 62,
+            height: 62,
             borderRadius: "50%",
             background: brand.dark,
             color: "#F3ECDD",
@@ -642,8 +679,8 @@ function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () =>
           }}
         >
           <svg
-            width="22"
-            height="22"
+            width="26"
+            height="26"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -2061,6 +2098,8 @@ export function RacePageV2({
           40% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
           100% { transform: translate(var(--fx), var(--fy)) scale(0.4); opacity: 0; }
         }
+        .tap-press { touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 0.08s ease-out; }
+        .tap-press:active { transform: scale(0.93); }
         @keyframes nameShake {
           0%, 100% { transform: translateX(0); }
           20%, 60% { transform: translateX(-5px); }
@@ -2144,7 +2183,7 @@ export function RacePageV2({
       </div>
 
       {/* ─── Content ─── */}
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 1.25rem 6rem" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 1.25rem 7.5rem" }}>
 
         {/* ===================== BEFORE ===================== */}
         {status === "upcoming" && (
