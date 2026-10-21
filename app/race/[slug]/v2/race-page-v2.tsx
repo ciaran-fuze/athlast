@@ -152,6 +152,45 @@ function isVideo(url: string): boolean {
 
 // --- Section Label ---
 
+// Placeholder shown when nobody has sent anything yet
+function EmptyCta({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "0.5rem",
+        padding: "1.4rem 1rem",
+        marginTop: "0.25rem",
+        background: "transparent",
+        border: `1.5px dashed ${brand.grid}`,
+        borderRadius: "14px",
+        cursor: "pointer",
+        color: brand.dark,
+      }}
+    >
+      <span
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: brand.dark,
+          color: "#F3ECDD",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {icon}
+      </span>
+      <span style={{ fontFamily: brand.font.body, fontSize: "0.9rem", fontWeight: 500 }}>{label}</span>
+    </button>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -684,10 +723,12 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
 
 function FloatingMessages({
   messages,
+  athleteName,
   onSendMessage,
   onBubbleTap,
 }: {
   messages: Message[];
+  athleteName: string;
   onSendMessage: () => void;
   onBubbleTap: (msg: Message) => void;
 }) {
@@ -771,24 +812,15 @@ function FloatingMessages({
 
   if (messages.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "1rem 0" }}>
-        <button
-          onClick={onSendMessage}
-          style={{
-            padding: "0.7rem 1.3rem",
-            background: brand.dark,
-            color: "#F3ECDD",
-            border: "none",
-            borderRadius: "11px",
-            fontFamily: brand.font.body,
-            fontSize: "0.85rem",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-        >
-          Send the first message
-        </button>
-      </div>
+      <EmptyCta
+        onClick={onSendMessage}
+        label={`Be the first to send ${athleteName} a message`}
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <path d="M4 5h16v11H9l-5 4V5Z" />
+          </svg>
+        }
+      />
     );
   }
 
@@ -932,17 +964,33 @@ function FloatingMessages({
 function PhotoGrid({
   photos: supporterPhotos,
   pinned,
+  athleteName,
   onPhotoClick,
   onAddPhoto,
 }: {
   photos: Message[];
+  athleteName: string;
   pinned?: Message | null;
   onPhotoClick: (msg: Message) => void;
   onAddPhoto: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const photos = pinned ? [pinned, ...supporterPhotos] : supporterPhotos;
-  if (photos.length === 0) return null;
+  if (photos.length === 0) {
+    return (
+      <EmptyCta
+        onClick={onAddPhoto}
+        label={`Be the first to send ${athleteName} a photo`}
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <circle cx="9" cy="10" r="1.6" />
+            <path d="m21 16-5-5-8 8" />
+          </svg>
+        }
+      />
+    );
+  }
 
   // Two rows (7 photos + add tile); beyond that a "+N" tile reveals the rest
   const MAX_COLLAPSED = 7;
@@ -963,7 +1011,7 @@ function PhotoGrid({
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
         gap: "0.4rem",
-        marginTop: "0.75rem",
+        marginTop: "0.25rem",
       }}
     >
       {visible.map((msg, i) => (
@@ -1955,8 +2003,10 @@ export function RacePageV2({
         {fundraising && <FundraisingCard data={fundraising} athleteName={firstName} />}
 
         {/* ===================== SUPPORT (all states) ===================== */}
+        <SectionLabel>Photo wall</SectionLabel>
         <PhotoGrid
           photos={supporterPhotos}
+          athleteName={firstName}
           pinned={status === "live" ? raceKitPost : null}
           onPhotoClick={(msg) => setLightboxMsg(msg)}
           onAddPhoto={openGallery}
@@ -1965,6 +2015,7 @@ export function RacePageV2({
         <SectionLabel>Messages of support</SectionLabel>
         <FloatingMessages
           messages={supporterMessages}
+          athleteName={firstName}
           onSendMessage={openMessage}
           onBubbleTap={(msg) => setLightboxMsg(msg)}
         />
