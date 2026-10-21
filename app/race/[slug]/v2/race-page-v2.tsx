@@ -192,7 +192,7 @@ function EmptyCta({ icon, label, onClick }: { icon: React.ReactNode; label: stri
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div
       style={{
@@ -209,6 +209,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     >
       {children}
       <span style={{ flex: 1, height: 1, background: brand.border }} />
+      {action}
     </div>
   );
 }
@@ -763,10 +764,75 @@ function FundraisingCard({ data, athleteName }: { data: FundraisingProgress; ath
 
 // --- Floating Messages ---
 
-// After the race: every message laid out in full for the athlete to read back
+// Full-screen sheet for "see everything" views
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      role="dialog"
+      aria-label={title}
+      style={{ position: "fixed", inset: 0, zIndex: 95, background: brand.bg, display: "flex", flexDirection: "column" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0.9rem 1.25rem",
+          borderBottom: `1px solid ${brand.border}`,
+        }}
+      >
+        <div style={{ fontFamily: brand.font.mono, fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: brand.dark }}>
+          {title}
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            border: `1px solid ${brand.border}`,
+            background: brand.card,
+            color: brand.dark,
+            fontSize: "1.1rem",
+            lineHeight: 1,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>
+    </div>
+  );
+}
+
+// Every photo in an Instagram-style grid
+function PhotoGallery({ photos, onPhotoClick }: { photos: Message[]; onPhotoClick: (msg: Message) => void }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
+      {photos.map((msg) => (
+        <div key={msg.id} onClick={() => onPhotoClick(msg)} style={{ position: "relative", aspectRatio: "1 / 1", cursor: "pointer", background: brand.border }}>
+          {isVideo(msg.photo_url!) ? (
+            <video src={msg.photo_url!} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} muted playsInline autoPlay loop />
+          ) : (
+            <img src={msg.photo_url!} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          )}
+          {!msg.is_athlete_post && (
+            <span style={{ position: "absolute", left: 6, bottom: 6 }}>
+              <Avatar name={msg.sender_name} url={msg.sender_avatar_url} size={20} ring="rgba(255,255,255,0.9)" />
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Every message laid out in full, newest first
 function MessageList({ messages, onBubbleTap }: { messages: Message[]; onBubbleTap: (msg: Message) => void }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", padding: "1rem 1.25rem 2rem" }}>
       {messages.map((msg) => (
         <div
           key={msg.id}
@@ -1058,18 +1124,17 @@ function PhotoGrid({
   photos: supporterPhotos,
   pinned,
   athleteName,
-  expanded,
+  onShowAll,
   onPhotoClick,
   onAddPhoto,
 }: {
   photos: Message[];
   athleteName: string;
-  expanded?: boolean;
+  onShowAll: () => void;
   pinned?: Message | null;
   onPhotoClick: (msg: Message) => void;
   onAddPhoto: () => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
   const photos = pinned ? [pinned, ...supporterPhotos] : supporterPhotos;
   if (photos.length === 0) {
     return (
@@ -1089,7 +1154,7 @@ function PhotoGrid({
 
   // Two rows (7 photos + add tile); beyond that a "+N" tile reveals the rest
   const MAX_COLLAPSED = 7;
-  const overflow = showAll || expanded ? 0 : Math.max(0, photos.length - MAX_COLLAPSED + 1);
+  const overflow = Math.max(0, photos.length - MAX_COLLAPSED + 1);
   const visible = overflow > 0 ? photos.slice(0, MAX_COLLAPSED - 1) : photos;
 
   const tileStyle: React.CSSProperties = {
@@ -1154,7 +1219,7 @@ function PhotoGrid({
       ))}
       {overflow > 0 && (
         <button
-          onClick={() => setShowAll(true)}
+          onClick={onShowAll}
           style={{
             ...tileStyle,
             background: brand.border,
@@ -1761,6 +1826,7 @@ export function RacePageV2({
   }, [fundraisingRaId]);
 
   const [showMap, setShowMap] = useState(false);
+  const [sheet, setSheet] = useState<"photos" | "messages" | null>(null);
 
   // Client clock for projecting RTRT runners between timing mats
   const demoSpeed = demoLoop?.speed ?? 1;
@@ -2115,22 +2181,65 @@ export function RacePageV2({
         <PhotoGrid
           photos={supporterPhotos}
           athleteName={firstName}
-          expanded={status === "finished"}
+          onShowAll={() => setSheet("photos")}
           pinned={status === "live" ? raceKitPost : null}
           onPhotoClick={(msg) => setLightboxMsg(msg)}
           onAddPhoto={openGallery}
         />
 
-        <SectionLabel>Messages of support</SectionLabel>
-        {status === "finished" && supporterMessages.length > 0 ? (
-          <MessageList messages={supporterMessages} onBubbleTap={(msg) => setLightboxMsg(msg)} />
-        ) : (
-          <FloatingMessages
-            messages={supporterMessages}
-            athleteName={firstName}
-            onSendMessage={openMessage}
-            onBubbleTap={(msg) => setLightboxMsg(msg)}
-          />
+        <SectionLabel
+          action={
+            supporterMessages.length > 0 && (
+              <button
+                onClick={() => setSheet("messages")}
+                aria-label="See all messages"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  border: `1px solid ${brand.border}`,
+                  background: brand.card,
+                  color: brand.dark,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <line x1="8" y1="6" x2="20" y2="6" />
+                  <line x1="8" y1="12" x2="20" y2="12" />
+                  <line x1="8" y1="18" x2="20" y2="18" />
+                  <circle cx="4" cy="6" r="0.6" fill="currentColor" />
+                  <circle cx="4" cy="12" r="0.6" fill="currentColor" />
+                  <circle cx="4" cy="18" r="0.6" fill="currentColor" />
+                </svg>
+              </button>
+            )
+          }
+        >
+          Messages of support
+        </SectionLabel>
+        <FloatingMessages
+          messages={supporterMessages}
+          athleteName={firstName}
+          onSendMessage={openMessage}
+          onBubbleTap={(msg) => setLightboxMsg(msg)}
+        />
+
+        {sheet === "photos" && (
+          <Sheet title={`Photo wall · ${supporterPhotos.length + (status === "live" && raceKitPost ? 1 : 0)}`} onClose={() => setSheet(null)}>
+            <PhotoGallery
+              photos={status === "live" && raceKitPost ? [raceKitPost, ...supporterPhotos] : supporterPhotos}
+              onPhotoClick={(msg) => setLightboxMsg(msg)}
+            />
+          </Sheet>
+        )}
+        {sheet === "messages" && (
+          <Sheet title={`Messages · ${supporterMessages.length}`} onClose={() => setSheet(null)}>
+            <MessageList messages={supporterMessages} onBubbleTap={(msg) => setLightboxMsg(msg)} />
+          </Sheet>
         )}
 
         <ActionButtons
@@ -2140,7 +2249,7 @@ export function RacePageV2({
         />
       </div>
 
-      {!inputMode && !lightboxMsg && !showSplits && !splashMsg && (
+      {!inputMode && !lightboxMsg && !showSplits && !splashMsg && !sheet && !showMap && (
         <FloatingAddButton
           onSelfie={openSelfie}
           onGallery={openGallery}
