@@ -117,8 +117,25 @@ function isFinishSplit(name: string): boolean {
   return /^finish(line)?$/i.test(name);
 }
 
+// Dublin Marathon cheer-zone mats: RTRT labels them by place, so map them to distance.
+// They move the runner's position but are left out of the splits table.
+const CHEER_ZONE_KM: Record<string, number> = {
+  "FURZE ROAD": 8.0467,
+  "CHERRYFIELD R'ABOUT": 23.1746,
+  "CHERRYFIELD R’ABOUT": 23.1746,
+  "TERENURE X-ROADS": 28.9682,
+  "ROEBUCK ROAD": 34.6009,
+  "FOSTERS AVENUE": 36.2102,
+  "NORTHUMBERLAND RD": 40.2336,
+};
+
+function isCheerZone(name: string): boolean {
+  return name.toUpperCase() in CHEER_ZONE_KM;
+}
+
 // Handles Race Result names (Startline, 5K, Finishline) and RTRT names (START, HALFWAY, 11M, FINISH)
 function splitNameToKm(name: string, raceDistanceKm: number): number | null {
+  if (isCheerZone(name)) return CHEER_ZONE_KM[name.toUpperCase()];
   if (/^start(line)?$/i.test(name)) return 0;
   if (isFinishSplit(name)) return raceDistanceKm;
   if (/^half(way)?$/i.test(name)) return raceDistanceKm / 2;
@@ -2502,7 +2519,7 @@ export function RacePageV2({
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {athleteSplits.map((split) => (
+              {athleteSplits.filter((split) => !isCheerZone(split.Name)).map((split) => (
                 <div
                   key={split.Name}
                   style={{

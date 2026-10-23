@@ -121,7 +121,7 @@ function extractAthleteData(frame: Frame, text: string): RtrtAthleteData {
   // Splits — "SPLIT_NAME \t chip time \t time of day \t pace"
   const splits: RtrtSplit[] = [];
   const splitPattern =
-    /^(START|FINISH|HALFWAY|HALF|5K|10K|15K|20K|25K|30K|35K|40K|\d+(?:\.\d+)?(?:K|M|MI))\s+(\d{1,2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}|---)/gim;
+    /^(START|FINISH|HALFWAY|HALF|5K|10K|15K|20K|25K|30K|35K|40K|\d+(?:\.\d+)?(?:K|M|MI)|Furze Road|Cherryfield R['’]about|Terenure X-Roads|Roebuck Road|Fosters Avenue|Northumberland Rd)\s+(\d{1,2}:\d{2}:\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(\d{2}:\d{2}|---)/gim;
   let match;
   while ((match = splitPattern.exec(text)) !== null) {
     splits.push({
