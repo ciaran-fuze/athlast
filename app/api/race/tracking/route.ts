@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { scrapeRtrtAthlete } from "@/lib/rtrt-scraper";
+import { fetchRtrtAthlete } from "@/lib/rtrt-api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,8 +40,10 @@ export async function GET(request: Request) {
     return Response.json({ error: "No tracking configured" }, { status: 404 });
   }
 
-  // Scrape fresh data
-  const scraped = await scrapeRtrtAthlete(ra.rtrt_event_code, ra.rtrt_athlete_id);
+  // RTRT's JSON feed first; fall back to the browser scraper if it fails
+  const scraped =
+    (await fetchRtrtAthlete(ra.rtrt_event_code, ra.rtrt_athlete_id)) ??
+    (await scrapeRtrtAthlete(ra.rtrt_event_code, ra.rtrt_athlete_id));
 
   if (!scraped) {
     // Scrape failed — return cached data if any
