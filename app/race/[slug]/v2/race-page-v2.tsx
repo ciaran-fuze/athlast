@@ -1145,12 +1145,14 @@ function PhotoGrid({
   photos: supporterPhotos,
   pinned,
   athleteName,
+  athleteAvatarUrl,
   onShowAll,
   onPhotoClick,
   onAddPhoto,
 }: {
   photos: Message[];
   athleteName: string;
+  athleteAvatarUrl?: string | null;
   onShowAll: () => void;
   pinned?: Message | null;
   onPhotoClick: (msg: Message) => void;
@@ -1227,14 +1229,16 @@ function PhotoGrid({
               textOverflow: "ellipsis",
             }}
           >
-            {msg.id === pinned?.id ? (
-              "Race kit"
-            ) : (
-              <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              {msg.id === pinned?.id ? (
+                <Avatar name={athleteName || msg.sender_name} url={athleteAvatarUrl} size={16} ring="rgba(255,255,255,0.9)" />
+              ) : (
                 <Avatar name={msg.sender_name} url={msg.sender_avatar_url} size={16} ring="rgba(255,255,255,0.9)" />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{msg.sender_name}</span>
+              )}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {msg.id === pinned?.id ? "Race kit" : msg.sender_name}
               </span>
-            )}
+            </span>
           </span>
         </div>
       ))}
@@ -1323,27 +1327,25 @@ function AthletePostCard({ msg, onPhotoClick }: { msg: Message; onPhotoClick: (m
       }}
     >
       {msg.photo_url && (
-        <div style={{ position: "relative", cursor: "pointer", background: brand.card, padding: "0.6rem 0.6rem 0" }} onClick={() => onPhotoClick(msg)}>
+        <div
+          style={{ position: "relative", height: 260, overflow: "hidden", cursor: "pointer", background: brand.dark }}
+          onClick={() => onPhotoClick(msg)}
+        >
+          {/* Blurred copy fills the frame so tall or wide photos show whole without bars */}
           <img
             src={msg.photo_url}
             alt=""
-            style={{ maxWidth: "100%", maxHeight: 220, width: "auto", height: "auto", display: "block", margin: "0 auto" }}
+            aria-hidden
+            style={{ position: "absolute", inset: "-20px", width: "calc(100% + 40px)", height: "calc(100% + 40px)", objectFit: "cover", filter: "blur(18px) brightness(0.85)" }}
+          />
+          <img
+            src={msg.photo_url}
+            alt=""
+            style={{ position: "relative", width: "100%", height: "100%", objectFit: "contain", display: "block" }}
           />
         </div>
       )}
       <div style={{ padding: "0.65rem 0.8rem" }}>
-        <div suppressHydrationWarning
-          style={{
-            fontFamily: brand.font.mono,
-            fontSize: "0.55rem",
-            letterSpacing: "0.1em",
-            color: brand.dark,
-            marginBottom: "0.25rem",
-            textTransform: "uppercase",
-          }}
-        >
-          HIS OWN WORDS · {formatTimeShort(msg.created_at)}
-        </div>
         <div
           style={{
             fontFamily: brand.font.body,
@@ -1415,6 +1417,19 @@ function ElapsedTimer({ elapsedAt }: { elapsedAt: (nowMs: number) => number | nu
 
 const WINDOW_KM = 2;
 
+const trackerButtonStyle: React.CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: "50%",
+  border: `1px solid ${brand.border}`,
+  background: brand.card,
+  color: brand.dark,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+};
+
 function CourseTracker({
   profile,
   distanceKm,
@@ -1423,6 +1438,7 @@ function CourseTracker({
   ghost,
   elapsedAt,
   onOpenMap,
+  onOpenKit,
 }: {
   profile: Race["elevation_profile"];
   distanceKm: number;
@@ -1431,6 +1447,7 @@ function CourseTracker({
   ghost: { offsetKm: number; deltaSec: number; goalTime: string } | null;
   elapsedAt?: ((nowMs: number) => number | null) | null;
   onOpenMap?: () => void;
+  onOpenKit?: () => void;
 }) {
   const course = profile ?? FLAT_COURSE;
   const height = profile ? 74 : 30;
@@ -1493,33 +1510,25 @@ function CourseTracker({
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
-    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: onOpenMap && !ghost && !elapsedAt ? 36 : 0 }}>
-      {onOpenMap && (
-        <button
-          onClick={onOpenMap}
-          aria-label="Open course map"
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            zIndex: 2,
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            border: `1px solid ${brand.border}`,
-            background: brand.card,
-            color: brand.dark,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
-            <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
-            <path d="M9 4v13.5M15 6.5V20" />
-          </svg>
-        </button>
+    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: (onOpenMap || onOpenKit) && !ghost && !elapsedAt ? 36 : 0 }}>
+      {(onOpenMap || onOpenKit) && (
+        <div style={{ position: "absolute", top: 0, right: 0, zIndex: 2, display: "flex", gap: "0.4rem" }}>
+          {onOpenKit && (
+            <button onClick={onOpenKit} aria-label={`${athleteName}'s race day kit`} style={trackerButtonStyle}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+                <path d="M9 3v2a3 3 0 0 0 6 0V3h2.5v4L20 10v11H4V10l2.5-3V3H9Z" />
+              </svg>
+            </button>
+          )}
+          {onOpenMap && (
+            <button onClick={onOpenMap} aria-label="Open course map" style={trackerButtonStyle}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+                <path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4l-6 2.5L9 4Z" />
+                <path d="M9 4v13.5M15 6.5V20" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
       {!ghost && elapsedAt && <ElapsedTimer elapsedAt={elapsedAt} />}
       {ghost && (
@@ -2211,6 +2220,11 @@ export function RacePageV2({
               ghost={ghost}
               elapsedAt={elapsedAt}
               onOpenMap={race.elevation_profile?.route ? () => setShowMap(true) : undefined}
+              onOpenKit={
+                raceKitPost
+                  ? () => setLightboxMsg({ ...raceKitPost, sender_name: `${firstName}'s Race Day Kit`, message: null })
+                  : undefined
+              }
             />
           </>
         )}
@@ -2252,6 +2266,7 @@ export function RacePageV2({
         <PhotoGrid
           photos={supporterPhotos}
           athleteName={firstName}
+          athleteAvatarUrl={athlete?.athletes.profile_picture}
           onShowAll={() => setSheet("photos")}
           pinned={status === "live" ? raceKitPost : null}
           onPhotoClick={(msg) => setLightboxMsg(msg)}
