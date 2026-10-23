@@ -3,9 +3,50 @@ import { fetchConfig, fetchParticipantSplits, Split } from "@/lib/raceresult";
 import { rtrtToSplits } from "@/lib/rtrt-splits";
 import { fetchFundraising, recordFundraisingSnapshot } from "@/lib/fundraising";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { RacePageV2 } from "./race-page-v2";
 
 export const dynamic = "force-dynamic";
+
+// Link previews (WhatsApp, iMessage) show the athlete and race, not the app name.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { data: race } = await supabase
+    .from("races")
+    .select("id, name, race_date")
+    .eq("slug", slug)
+    .single();
+  if (!race) return {};
+
+  const { data: ra } = await supabase
+    .from("race_athletes")
+    .select("athletes(first_name, last_name)")
+    .eq("race_id", race.id)
+    .limit(1)
+    .maybeSingle();
+  const athlete = ra?.athletes as { first_name: string; last_name: string } | null | undefined;
+  const title = athlete
+    ? `${athlete.first_name} ${athlete.last_name} · ${race.name}`
+    : race.name;
+
+  const description = new Date(race.race_date).toLocaleDateString("en-IE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, siteName: race.name },
+    twitter: { title, description },
+  };
+}
 
 export default async function RacePageV2Route({
   params,
