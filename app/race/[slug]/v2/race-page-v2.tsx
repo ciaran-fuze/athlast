@@ -562,7 +562,7 @@ function SupporterCard({ msg }: { msg: Message }) {
 
 // --- Action Buttons ---
 
-function ActionButtons({ onCamera, onGallery, onVideo, onMessage }: { onCamera: () => void; onGallery: () => void; onVideo: () => void; onMessage: () => void }) {
+function ActionButtons({ onCamera, onGallery, onMessage }: { onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
   const btnStyle: React.CSSProperties = {
     flex: 1,
     border: `1px solid ${brand.border}`,
@@ -598,13 +598,6 @@ function ActionButtons({ onCamera, onGallery, onVideo, onMessage }: { onCamera: 
           </svg>
           Gallery
         </button>
-        <button onClick={onVideo} style={btnStyle}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <path d="m10 8.5 5 3.5-5 3.5z" />
-          </svg>
-          Video
-        </button>
         <button onClick={onMessage} style={btnStyle}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -618,13 +611,12 @@ function ActionButtons({ onCamera, onGallery, onVideo, onMessage }: { onCamera: 
 
 // --- Floating Add Button ---
 
-function FloatingAddButton({ onCamera, onGallery, onVideo, onMessage }: { onCamera: () => void; onGallery: () => void; onVideo: () => void; onMessage: () => void }) {
+function FloatingAddButton({ onCamera, onGallery, onMessage }: { onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
   const items: { label: string; onClick: () => void }[] = [
     { label: "Camera", onClick: onCamera },
     { label: "Gallery", onClick: onGallery },
-    { label: "Video", onClick: onVideo },
     { label: "Message", onClick: onMessage },
   ];
 
@@ -1886,7 +1878,6 @@ export function RacePageV2({
   const [showSplits, setShowSplits] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -2156,7 +2147,6 @@ export function RacePageV2({
 
   const openGallery = () => galleryInputRef.current?.click();
   const openCamera = () => cameraInputRef.current?.click();
-  const openVideo = () => videoInputRef.current?.click();
   const openMessage = () => setInputMode("message");
 
   return (
@@ -2432,7 +2422,6 @@ export function RacePageV2({
         <ActionButtons
           onCamera={openCamera}
           onGallery={openGallery}
-          onVideo={openVideo}
           onMessage={openMessage}
         />
       </div>
@@ -2441,7 +2430,6 @@ export function RacePageV2({
         <FloatingAddButton
           onCamera={openCamera}
           onGallery={openGallery}
-          onVideo={openVideo}
           onMessage={openMessage}
         />
       )}
@@ -2451,13 +2439,6 @@ export function RacePageV2({
         ref={galleryInputRef}
         type="file"
         accept="image/*,video/*"
-        onChange={handleFileCapture}
-        style={{ display: "none" }}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
         onChange={handleFileCapture}
         style={{ display: "none" }}
       />
