@@ -1418,6 +1418,37 @@ function ElapsedTimer({ elapsedAt }: { elapsedAt: (nowMs: number) => number | nu
   );
 }
 
+function EstimatedFinish({ time }: { time: string }) {
+  return (
+    <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
+      <div
+        style={{
+          fontFamily: brand.font.mono,
+          fontSize: "0.75rem",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: brand.muted,
+          fontWeight: 600,
+        }}
+      >
+        Est. finish
+      </div>
+      <div
+        style={{
+          fontFamily: brand.font.display,
+          fontSize: "2.2rem",
+          fontWeight: 600,
+          lineHeight: 1.1,
+          fontVariantNumeric: "tabular-nums",
+          color: brand.dark,
+        }}
+      >
+        {time}
+      </div>
+    </div>
+  );
+}
+
 const WINDOW_KM = 2;
 
 // Mini race bib: orange number band with safety-pin holes
@@ -1473,6 +1504,7 @@ function CourseTracker({
   elapsedAt,
   onOpenMap,
   onOpenKit,
+  estimatedFinish,
 }: {
   profile: Race["elevation_profile"];
   distanceKm: number;
@@ -1482,6 +1514,8 @@ function CourseTracker({
   elapsedAt?: ((nowMs: number) => number | null) | null;
   onOpenMap?: () => void;
   onOpenKit?: () => void;
+  /** "3:47" — shown instead of the elapsed clock for runners without a goal */
+  estimatedFinish?: string | null;
 }) {
   const course = profile ?? FLAT_COURSE;
   const height = profile ? 74 : 30;
@@ -1544,7 +1578,7 @@ function CourseTracker({
   const ghostAhead = ghost !== null && ghost.deltaSec < 0;
 
   return (
-    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: (onOpenMap || onOpenKit) && !ghost && !elapsedAt ? 36 : 0 }}>
+    <div style={{ marginTop: "0.25rem", position: "relative", paddingTop: (onOpenMap || onOpenKit) && !ghost && !elapsedAt && !estimatedFinish ? 36 : 0 }}>
       {(onOpenMap || onOpenKit) && (
         <div style={{ position: "absolute", top: 0, right: 0, zIndex: 2, display: "flex", gap: "0.4rem" }}>
           {onOpenKit && (
@@ -1564,7 +1598,8 @@ function CourseTracker({
           )}
         </div>
       )}
-      {!ghost && elapsedAt && <ElapsedTimer elapsedAt={elapsedAt} />}
+      {!ghost && estimatedFinish && <EstimatedFinish time={estimatedFinish} />}
+      {!ghost && !estimatedFinish && elapsedAt && <ElapsedTimer elapsedAt={elapsedAt} />}
       {ghost && (
         <div style={{ textAlign: "center", margin: "0.25rem 0 0.5rem" }}>
           <div
@@ -1639,7 +1674,8 @@ function CourseTracker({
                 borderRadius: 999,
                 fontWeight: 600,
                 fontSize: "0.55rem",
-                ...(goalOff ? { left: goalKm! > endKm ? "auto" : 0, right: goalKm! > endKm ? 0 : "auto", transform: "none" } : {}),
+                // Off-window badge hovers above the pinned dot, clear of the course line
+                ...(goalOff ? { top: "auto", bottom: 16, left: goalKm! > endKm ? "auto" : 0, right: goalKm! > endKm ? 0 : "auto", transform: "none" } : {}),
               }}
             >
               {goalOff ? `Goal ${ghost.offsetKm > 0 ? "+" : "−"}${Math.abs(ghost.offsetKm).toFixed(1)}km` : "Goal"}
@@ -2073,6 +2109,15 @@ export function RacePageV2({
         ? (ms: number) => (ms - dublinTimeToMs(race.race_date, startTod)) / 1000
         : null;
 
+  // No goal: project a finish from average pace to the last mat (6:00/km until the first mat after the start)
+  const estimatedFinish = (() => {
+    if (goalTime || !isRtrt || status !== "live") return null;
+    const last = [...completedSplits].reverse().find((sp) => sp.Chip && (splitNameToKm(sp.Name, race.distance_km) ?? 0) > 0);
+    const pacePerKm = last ? parseTimeToSeconds(last.Chip!) / splitNameToKm(last.Name, race.distance_km)! : 360;
+    const mins = Math.round((pacePerKm * race.distance_km) / 60);
+    return `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+  })();
+
   // Average pace to the last mat crossed
   const avgPace = (() => {
     const last = [...completedSplits].reverse().find((sp) => sp.Chip && (splitNameToKm(sp.Name, race.distance_km) ?? 0) > 0);
@@ -2257,6 +2302,7 @@ export function RacePageV2({
               athleteName={firstName}
               ghost={ghost}
               elapsedAt={elapsedAt}
+              estimatedFinish={estimatedFinish}
               onOpenMap={race.elevation_profile?.route ? () => setShowMap(true) : undefined}
               onOpenKit={
                 raceKitPost
