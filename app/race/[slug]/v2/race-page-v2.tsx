@@ -562,7 +562,7 @@ function SupporterCard({ msg }: { msg: Message }) {
 
 // --- Action Buttons ---
 
-function ActionButtons({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie: () => void; onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
+function ActionButtons({ onCamera, onGallery, onVideo, onMessage }: { onCamera: () => void; onGallery: () => void; onVideo: () => void; onMessage: () => void }) {
   const btnStyle: React.CSSProperties = {
     flex: 1,
     border: `1px solid ${brand.border}`,
@@ -583,17 +583,10 @@ function ActionButtons({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie:
   return (
     <>
       <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-        <button onClick={onSelfie} style={btnStyle}>
+        <button onClick={onCamera} style={btnStyle}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
             <circle cx="12" cy="13" r="4" />
-          </svg>
-          Selfie
-        </button>
-        <button onClick={onCamera} style={btnStyle}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="6" width="14" height="12" rx="2" />
-            <path d="m16 10 6-3v10l-6-3" />
           </svg>
           Camera
         </button>
@@ -604,6 +597,13 @@ function ActionButtons({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie:
             <polyline points="21 15 16 10 5 21" />
           </svg>
           Gallery
+        </button>
+        <button onClick={onVideo} style={btnStyle}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <path d="m10 8.5 5 3.5-5 3.5z" />
+          </svg>
+          Video
         </button>
         <button onClick={onMessage} style={btnStyle}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -618,13 +618,13 @@ function ActionButtons({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie:
 
 // --- Floating Add Button ---
 
-function FloatingAddButton({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie: () => void; onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
+function FloatingAddButton({ onCamera, onGallery, onVideo, onMessage }: { onCamera: () => void; onGallery: () => void; onVideo: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
   const items: { label: string; onClick: () => void }[] = [
-    { label: "Selfie", onClick: onSelfie },
     { label: "Camera", onClick: onCamera },
     { label: "Gallery", onClick: onGallery },
+    { label: "Video", onClick: onVideo },
     { label: "Message", onClick: onMessage },
   ];
 
@@ -1884,20 +1884,9 @@ export function RacePageV2({
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [lightboxMsg, setLightboxMsg] = useState<Message | null>(null);
   const [showSplits, setShowSplits] = useState(false);
-  const selfieInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-
-  // Selfies from the front camera: keep them the way they looked in the camera on iPhone
-  async function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.files?.[0];
-    e.target.value = "";
-    if (!raw) return;
-    const file = isIos() && raw.type.startsWith("image/") ? await mirrorPhoto(raw) : raw;
-    setPendingFile(file);
-    setPendingPreview(URL.createObjectURL(file));
-    setInputMode("gallery");
-  }
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -2165,9 +2154,9 @@ export function RacePageV2({
     .filter((m) => !m.is_athlete_post && m.photo_url && m.id !== splashMsg?.id)
     .sort(byNewest);
 
-  const openSelfie = () => selfieInputRef.current?.click();
   const openGallery = () => galleryInputRef.current?.click();
   const openCamera = () => cameraInputRef.current?.click();
+  const openVideo = () => videoInputRef.current?.click();
   const openMessage = () => setInputMode("message");
 
   return (
@@ -2441,35 +2430,34 @@ export function RacePageV2({
         )}
 
         <ActionButtons
-          onSelfie={openSelfie}
           onCamera={openCamera}
           onGallery={openGallery}
+          onVideo={openVideo}
           onMessage={openMessage}
         />
       </div>
 
       {!inputMode && !lightboxMsg && !showSplits && !splashMsg && !sheet && !showMap && (
         <FloatingAddButton
-          onSelfie={openSelfie}
           onCamera={openCamera}
           onGallery={openGallery}
+          onVideo={openVideo}
           onMessage={openMessage}
         />
       )}
 
       {/* Hidden file inputs — triggered directly, no modal flash */}
       <input
-        ref={selfieInputRef}
-        type="file"
-        accept="image/*"
-        capture="user"
-        onChange={handleSelfieCapture}
-        style={{ display: "none" }}
-      />
-      <input
         ref={galleryInputRef}
         type="file"
         accept="image/*,video/*"
+        onChange={handleFileCapture}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
         onChange={handleFileCapture}
         style={{ display: "none" }}
       />
@@ -2900,27 +2888,6 @@ export function RacePageV2({
 function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-// Mirror a full selfie photo so it posts the way it looked in the camera
-async function mirrorPhoto(file: File, maxSide = 2048): Promise<File> {
-  try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    const w = Math.round(bmp.width * scale);
-    const h = Math.round(bmp.height * scale);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
-    ctx.translate(w, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(bmp, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
-    return blob ? new File([blob], "selfie.jpg", { type: "image/jpeg" }) : file;
-  } catch {
-    return file;
-  }
 }
 
 // Shrink a selfie to a small square before upload
