@@ -1420,47 +1420,33 @@ function ElapsedTimer({ elapsedAt }: { elapsedAt: (nowMs: number) => number | nu
 
 const WINDOW_KM = 2;
 
-// Mini race bib: paper card, safety-pin holes, orange number band
+// Mini race bib: orange number band with safety-pin holes
 function BibTag({ bib }: { bib: number }) {
   const pin = (pos: React.CSSProperties) => (
-    <span style={{ position: "absolute", display: "block", width: 3, height: 3, minWidth: 3, borderRadius: "50%", background: brand.muted, ...pos }} />
+    <span style={{ position: "absolute", display: "block", width: 3, height: 3, minWidth: 3, borderRadius: "50%", background: "rgba(26,26,24,0.55)", ...pos }} />
   );
   return (
     <div
       style={{
         position: "relative",
-        display: "inline-flex",
-        flexDirection: "column",
-        alignItems: "center",
+        display: "inline-block",
         marginTop: "0.25rem",
-        padding: "1px 6px 3px",
-        background: "#fff",
-        border: `1px solid ${brand.border}`,
-        borderRadius: 3,
-        boxShadow: "0 1px 2px rgba(26,26,24,0.12)",
+        padding: "1px 9px",
+        background: "#f5a623",
+        borderRadius: 2,
+        fontFamily: brand.font.mono,
+        fontWeight: 700,
+        fontSize: "0.7rem",
+        letterSpacing: "0.04em",
+        lineHeight: 1.35,
+        color: brand.dark,
       }}
     >
       {pin({ top: 2, left: 2 })}
       {pin({ top: 2, right: 2 })}
       {pin({ bottom: 2, left: 2 })}
       {pin({ bottom: 2, right: 2 })}
-      <span style={{ fontFamily: brand.font.mono, fontSize: "0.38rem", letterSpacing: "0.18em", color: brand.muted, lineHeight: 1.3 }}>
-        BIB
-      </span>
-      <span
-        style={{
-          fontFamily: brand.font.mono,
-          fontWeight: 700,
-          fontSize: "0.7rem",
-          letterSpacing: "0.04em",
-          lineHeight: 1.25,
-          padding: "0 0.3rem",
-          background: "#f5a623",
-          color: brand.dark,
-        }}
-      >
-        {bib}
-      </span>
+      {bib}
     </div>
   );
 }
