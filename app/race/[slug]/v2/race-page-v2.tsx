@@ -260,10 +260,13 @@ function BigCountdown({
   raceDate,
   startTime,
   athleteName,
+  tight,
 }: {
   raceDate: string;
   startTime?: string | null;
   athleteName: string;
+  /** Less top space when the header is taller (bib shown) */
+  tight?: boolean;
 }) {
   // Start ticking on the client only, so server and client HTML match
   const [now, setNow] = useState<number | null>(null);
@@ -282,7 +285,7 @@ function BigCountdown({
   // Gun has gone but tracking hasn't seen them cross the start mat yet
   if (diff === 0) {
     return (
-      <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
+      <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: tight ? "0.75rem 0 3rem" : "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
         <SkylineBackdrop />
         <div
           style={{
@@ -338,7 +341,7 @@ function BigCountdown({
   };
 
   return (
-    <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
+    <div style={{ position: "relative", isolation: "isolate", overflow: "hidden", textAlign: "center", padding: tight ? "0.75rem 0 3rem" : "2.5rem 0 3rem", margin: "0 -1.25rem" }}>
       <SkylineBackdrop />
       <div
         style={{
@@ -1417,6 +1420,51 @@ function ElapsedTimer({ elapsedAt }: { elapsedAt: (nowMs: number) => number | nu
 
 const WINDOW_KM = 2;
 
+// Mini race bib: paper card, safety-pin holes, orange number band
+function BibTag({ bib }: { bib: number }) {
+  const pin = (pos: React.CSSProperties) => (
+    <span style={{ position: "absolute", display: "block", width: 3, height: 3, minWidth: 3, borderRadius: "50%", background: brand.muted, ...pos }} />
+  );
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: "center",
+        marginTop: "0.25rem",
+        padding: "1px 6px 3px",
+        background: "#fff",
+        border: `1px solid ${brand.border}`,
+        borderRadius: 3,
+        boxShadow: "0 1px 2px rgba(26,26,24,0.12)",
+      }}
+    >
+      {pin({ top: 2, left: 2 })}
+      {pin({ top: 2, right: 2 })}
+      {pin({ bottom: 2, left: 2 })}
+      {pin({ bottom: 2, right: 2 })}
+      <span style={{ fontFamily: brand.font.mono, fontSize: "0.38rem", letterSpacing: "0.18em", color: brand.muted, lineHeight: 1.3 }}>
+        BIB
+      </span>
+      <span
+        style={{
+          fontFamily: brand.font.mono,
+          fontWeight: 700,
+          fontSize: "0.7rem",
+          letterSpacing: "0.04em",
+          lineHeight: 1.25,
+          padding: "0 0.3rem",
+          background: "#f5a623",
+          color: brand.dark,
+        }}
+      >
+        {bib}
+      </span>
+    </div>
+  );
+}
+
 const trackerButtonStyle: React.CSSProperties = {
   width: 34,
   height: 34,
@@ -2143,30 +2191,34 @@ export function RacePageV2({
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: "0.5rem",
             marginTop: "0.2rem",
           }}
         >
-          <div
-            style={{
-              fontFamily: brand.font.display,
-              fontSize: "1.35rem",
-              fontWeight: 600,
-              letterSpacing: "-0.015em",
-              lineHeight: 1.1,
-              color: brand.dark,
-            }}
-          >
-            {athlete
-              ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
-              : race.name}
+          <div>
+            <div
+              style={{
+                fontFamily: brand.font.display,
+                fontSize: "1.35rem",
+                fontWeight: 600,
+                letterSpacing: "-0.015em",
+                lineHeight: 1.1,
+                color: brand.dark,
+              }}
+            >
+              {athlete
+                ? `${athlete.athletes.first_name} ${athlete.athletes.last_name}`
+                : race.name}
+            </div>
+            {athlete?.bib_number ? <BibTag bib={athlete.bib_number} /> : null}
           </div>
           {status !== "upcoming" && completedSplits.length > 0 && (
             <button
               onClick={() => setShowSplits(true)}
               style={{
                 marginLeft: "auto",
+                marginTop: "0.3rem",
                 padding: "0.2rem 0.6rem",
                 background: "transparent",
                 border: `1px solid ${brand.border}`,
@@ -2192,7 +2244,7 @@ export function RacePageV2({
         {/* ===================== BEFORE ===================== */}
         {status === "upcoming" && (
           <>
-            <BigCountdown raceDate={race.race_date} startTime={race.start_time} athleteName={firstName} />
+            <BigCountdown raceDate={race.race_date} startTime={race.start_time} athleteName={firstName} tight={!!athlete?.bib_number} />
 
             {/* Athlete's own posts */}
             {athletePosts.length > 0 && (
