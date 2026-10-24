@@ -164,6 +164,27 @@ function formatTimeShort(dateString: string): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/** Upload a photo or video straight to storage via a signed URL; returns its public URL. */
+async function uploadMedia(file: File): Promise<string | null> {
+  try {
+    const res = await fetch("/api/race/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: file.name }),
+    });
+    if (!res.ok) return null;
+    const { signedUrl, url } = await res.json();
+    const put = await fetch(signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    return put.ok ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 function isVideo(url: string): boolean {
   return /\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url);
 }
@@ -541,7 +562,7 @@ function SupporterCard({ msg }: { msg: Message }) {
 
 // --- Action Buttons ---
 
-function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
+function ActionButtons({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie: () => void; onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
   const btnStyle: React.CSSProperties = {
     flex: 1,
     border: `1px solid ${brand.border}`,
@@ -569,6 +590,13 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
           </svg>
           Selfie
         </button>
+        <button onClick={onCamera} style={btnStyle}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="6" width="14" height="12" rx="2" />
+            <path d="m16 10 6-3v10l-6-3" />
+          </svg>
+          Camera
+        </button>
         <button onClick={onGallery} style={btnStyle}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={brand.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -590,11 +618,12 @@ function ActionButtons({ onSelfie, onGallery, onMessage }: { onSelfie: () => voi
 
 // --- Floating Add Button ---
 
-function FloatingAddButton({ onSelfie, onGallery, onMessage }: { onSelfie: () => void; onGallery: () => void; onMessage: () => void }) {
+function FloatingAddButton({ onSelfie, onCamera, onGallery, onMessage }: { onSelfie: () => void; onCamera: () => void; onGallery: () => void; onMessage: () => void }) {
   const [open, setOpen] = useState(false);
 
   const items: { label: string; onClick: () => void }[] = [
     { label: "Selfie", onClick: onSelfie },
+    { label: "Camera", onClick: onCamera },
     { label: "Gallery", onClick: onGallery },
     { label: "Message", onClick: onMessage },
   ];
@@ -1857,6 +1886,7 @@ export function RacePageV2({
   const [showSplits, setShowSplits] = useState(false);
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Selfies from the front camera: keep them the way they looked in the camera on iPhone
   async function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1871,15 +1901,12 @@ export function RacePageV2({
 
   function handleFileCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setPendingFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPendingPreview(reader.result as string);
-      setInputMode("gallery"); // open modal with file pre-loaded
-    };
-    reader.readAsDataURL(file);
     e.target.value = ""; // reset so same file can be re-selected
+    if (!file) return;
+    // Object URL, not a data URL: videos can be tens of MB
+    setPendingFile(file);
+    setPendingPreview(URL.createObjectURL(file));
+    setInputMode("gallery"); // open modal with file pre-loaded
   }
 
   // Splash for new messages
@@ -2140,6 +2167,7 @@ export function RacePageV2({
 
   const openSelfie = () => selfieInputRef.current?.click();
   const openGallery = () => galleryInputRef.current?.click();
+  const openCamera = () => cameraInputRef.current?.click();
   const openMessage = () => setInputMode("message");
 
   return (
@@ -2414,6 +2442,7 @@ export function RacePageV2({
 
         <ActionButtons
           onSelfie={openSelfie}
+          onCamera={openCamera}
           onGallery={openGallery}
           onMessage={openMessage}
         />
@@ -2422,6 +2451,7 @@ export function RacePageV2({
       {!inputMode && !lightboxMsg && !showSplits && !splashMsg && !sheet && !showMap && (
         <FloatingAddButton
           onSelfie={openSelfie}
+          onCamera={openCamera}
           onGallery={openGallery}
           onMessage={openMessage}
         />
@@ -2439,7 +2469,15 @@ export function RacePageV2({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
+        onChange={handleFileCapture}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*,video/*"
+        capture="environment"
         onChange={handleFileCapture}
         style={{ display: "none" }}
       />
@@ -2979,15 +3017,11 @@ function MessageInput({
 
     let photoUrl: string | null = null;
     if (photo) {
-      const formData = new FormData();
-      formData.append("file", photo);
-      const uploadRes = await fetch("/api/race/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (uploadRes.ok) {
-        const data = await uploadRes.json();
-        photoUrl = data.url;
+      photoUrl = await uploadMedia(photo);
+      if (!photoUrl) {
+        setSending(false);
+        alert(`That ${photo.type.startsWith("video/") ? "video" : "photo"} didn't upload. Check your signal and try again.`);
+        return;
       }
     }
 
