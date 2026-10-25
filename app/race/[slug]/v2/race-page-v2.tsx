@@ -2625,6 +2625,10 @@ export function RacePageV2({
             style={{
               width: "100%",
               maxWidth: 440,
+              maxHeight: "100%",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
               background: brand.bg,
               borderRadius: "24px",
               padding: "1.5rem",
@@ -2632,6 +2636,26 @@ export function RacePageV2({
               animation: "splashCardIn 0.4s ease-out",
             }}
           >
+            <button
+              onClick={() => setShowSplits(false)}
+              aria-label="Close"
+              style={{
+                position: "absolute",
+                top: "1rem",
+                right: "1rem",
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                border: `1px solid ${brand.border}`,
+                background: brand.card,
+                color: brand.dark,
+                fontSize: "1.1rem",
+                lineHeight: 1,
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
             <h3
               style={{
                 margin: "0 0 1rem",
@@ -2655,7 +2679,7 @@ export function RacePageV2({
                 </div>
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch" }}>
               {athleteSplits.filter((split) => !isCheerZone(split.Name)).map((split) => (
                 <div
                   key={split.Name}
