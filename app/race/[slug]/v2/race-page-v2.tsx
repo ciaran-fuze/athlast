@@ -1472,7 +1472,12 @@ function EstimatedFinish({ time }: { time: string }) {
 
 const WINDOW_KM = 2;
 
-// Mini race bib: orange number band with safety-pin holes
+// Bib band colours that aren't the default orange, matched to the runner's real bib
+const BIB_COLOURS: Record<number, string> = {
+  13761: "#2aa7df", // Thomas Corless, blue wave
+};
+
+// Mini race bib: coloured number band with safety-pin holes
 function BibTag({ bib }: { bib: number }) {
   const pin = (pos: React.CSSProperties) => (
     <span style={{ position: "absolute", display: "block", width: 3, height: 3, minWidth: 3, borderRadius: "50%", background: "rgba(26,26,24,0.55)", ...pos }} />
@@ -1484,7 +1489,7 @@ function BibTag({ bib }: { bib: number }) {
         display: "inline-block",
         marginTop: "0.25rem",
         padding: "1px 9px",
-        background: "#f5a623",
+        background: BIB_COLOURS[bib] ?? "#f5a623",
         borderRadius: 2,
         fontFamily: brand.font.mono,
         fontWeight: 700,
