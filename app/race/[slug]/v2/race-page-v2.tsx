@@ -1880,6 +1880,8 @@ export function RacePageV2({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [lightboxMsg, setLightboxMsg] = useState<Message | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
   const [showSplits, setShowSplits] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -2152,6 +2154,41 @@ export function RacePageV2({
 
   const openGallery = () => galleryInputRef.current?.click();
   const openCamera = () => cameraInputRef.current?.click();
+
+  // Swipe through the photo wall in the viewer, in the same order as the wall
+  const wallPhotos = status === "live" && raceKitPost ? [raceKitPost, ...supporterPhotos] : supporterPhotos;
+  const lightboxIdx = lightboxMsg?.photo_url ? wallPhotos.findIndex((m) => m.id === lightboxMsg.id) : -1;
+  const canSwipe = lightboxIdx >= 0 && wallPhotos.length > 1;
+  const showPhotoAt = (i: number) => {
+    if (i >= 0 && i < wallPhotos.length) setLightboxMsg(wallPhotos[i]);
+  };
+  const onLightboxTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY };
+    swipedRef.current = false;
+  };
+  const onLightboxTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || !canSwipe) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    swipedRef.current = true; // a swipe shouldn't also close the viewer
+    showPhotoAt(lightboxIdx + (dx < 0 ? 1 : -1));
+  };
+
+  // Arrow keys on desktop
+  useEffect(() => {
+    if (!canSwipe) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" && lightboxIdx < wallPhotos.length - 1) setLightboxMsg(wallPhotos[lightboxIdx + 1]);
+      if (e.key === "ArrowLeft" && lightboxIdx > 0) setLightboxMsg(wallPhotos[lightboxIdx - 1]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canSwipe, lightboxIdx, wallPhotos]);
   const openMessage = () => setInputMode("message");
 
   return (
@@ -2747,7 +2784,15 @@ export function RacePageV2({
       {/* Lightbox */}
       {lightboxMsg && (
         <div
-          onClick={() => setLightboxMsg(null)}
+          onClick={() => {
+            if (swipedRef.current) {
+              swipedRef.current = false;
+              return;
+            }
+            setLightboxMsg(null);
+          }}
+          onTouchStart={onLightboxTouchStart}
+          onTouchEnd={onLightboxTouchEnd}
           style={{
             position: "fixed",
             inset: 0,
@@ -2761,10 +2806,28 @@ export function RacePageV2({
             animation: "splashIn 0.3s ease-out",
           }}
         >
+          {canSwipe && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+                left: 0,
+                right: 0,
+                textAlign: "center",
+                fontFamily: brand.font.mono,
+                fontSize: "0.7rem",
+                letterSpacing: "0.1em",
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              {lightboxIdx + 1} / {wallPhotos.length}
+            </div>
+          )}
           {lightboxMsg.photo_url ? (
             <>
               {isVideo(lightboxMsg.photo_url) ? (
                 <video
+                  key={lightboxMsg.id}
                   src={lightboxMsg.photo_url}
                   style={{
                     maxWidth: "100%",
