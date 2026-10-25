@@ -1834,17 +1834,6 @@ function FinishResult({
       >
         {finishTime}
       </div>
-      <div
-        style={{
-          fontFamily: brand.font.body,
-          fontSize: "0.85rem",
-          margin: "0.6rem 0.5rem 0",
-          lineHeight: 1.4,
-          color: brand.muted,
-        }}
-      >
-        He doesn&apos;t have his phone yet, send him support.
-      </div>
     </div>
   );
 }
